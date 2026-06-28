@@ -15,7 +15,7 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
   template: `
     <div class="manager-dashboard">
       <div class="dashboard-header">
-        <h1>Dashboard</h1>
+        <h1>{{ greeting }}, {{ managerName }} 👋</h1>
         <p class="text-secondary">Welcome back! Here's an overview of your mall.</p>
       </div>
 
@@ -132,6 +132,21 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
           </button>
         </div>
       </div>
+
+      <div class="recent-activity" *ngIf="!loading">
+        <div class="section-header">
+          <h2>Recent Activity</h2>
+        </div>
+        <div class="activity-list">
+          <div class="activity-item" *ngFor="let activity of activities">
+            <div class="activity-dot" [style.background-color]="activity.color"></div>
+            <div class="activity-content">
+              <div class="activity-text">{{ activity.text }}</div>
+              <div class="activity-time">{{ activity.time }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -162,7 +177,8 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
     }
 
     .occupancy-section,
-    .quick-actions {
+    .quick-actions,
+    .recent-activity {
       margin-bottom: 40px;
     }
 
@@ -302,6 +318,48 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
       color: var(--color-text-secondary);
     }
 
+    .activity-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      background: var(--color-bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+
+    .activity-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .activity-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .activity-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
+
+    .activity-time {
+      font-size: 12px;
+      color: var(--color-text-muted);
+    }
+
     @media (max-width: 768px) {
       .occupancy-card {
         flex-direction: column;
@@ -327,6 +385,21 @@ export class ManagerDashboardComponent implements OnInit {
   occupiedStores = 0;
   vacantStores = 0;
   totalAssistants = 0;
+  managerName = 'Manager';
+  activities = [
+    { icon: 'pi pi-shop', text: 'Store "Tech Arena" added', time: '2 hours ago', color: '#4F8EF7' },
+    { icon: 'pi pi-users', text: 'Assistant Salma permissions updated', time: '5 hours ago', color: '#7C3AED' },
+    { icon: 'pi pi-check-circle', text: 'Store "Fashion Hub" renewed contract', time: 'Yesterday', color: '#10B981' },
+    { icon: 'pi pi-exclamation-triangle', text: 'Maintenance alert in Zone B', time: 'Yesterday', color: '#F59E0B' },
+    { icon: 'pi pi-user-plus', text: 'New assistant Farah Amor added', time: '3 days ago', color: '#4F8EF7' },
+  ];
+
+  get greeting(): string {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
 
   get occupancyPercentage(): number {
     if (this.totalStores === 0) return 0;
@@ -350,6 +423,7 @@ export class ManagerDashboardComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.managerName = this.auth.user?.fullName || 'Manager';
     this.loadData();
   }
 

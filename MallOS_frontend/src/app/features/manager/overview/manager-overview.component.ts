@@ -18,7 +18,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
       <!-- Page Header -->
       <app-page-header
         title="3D Mall View"
-        [breadcrumbs]="[{ label: 'Dashboard', link: '/mall/dashboard' }, { label: '3D Mall View' }]">
+        [breadcrumbs]="[{ label: 'Dashboard', url: '/mall/dashboard' }, { label: '3D Mall View' }]">
       </app-page-header>
 
       <!-- Mall Info Strip -->
@@ -35,7 +35,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
         <div class="info-divider"></div>
         <div class="info-item">
           <span class="info-label">Total Area</span>
-          <span class="info-value">{{ mall.totalArea?.toLocaleString() }} m²</span>
+          <span class="info-value">{{ mall.totalArea.toLocaleString() }} m²</span>
         </div>
         <div class="info-divider"></div>
         <div class="info-item">
@@ -45,7 +45,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
         <div class="info-divider"></div>
         <div class="info-item">
           <span class="info-label">Status</span>
-          <span class="status-badge" [ngClass]="'status-' + mall.status?.toLowerCase()">
+          <span class="status-badge" [ngClass]="'status-' + mall.status.toLowerCase()">
             <span class="status-dot"></span>
             {{ mall.status }}
           </span>
@@ -322,7 +322,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
               <div class="popup-details">
                 <div class="popup-row">
                   <span class="popup-label">Category</span>
-                  <span class="popup-value category-badge">{{ selectedStore.category?.replace('_', ' ') }}</span>
+                  <span class="popup-value category-badge">{{ selectedStore.category.replace('_', ' ') }}</span>
                 </div>
                 <div class="popup-row">
                   <span class="popup-label">Surface</span>
@@ -334,7 +334,7 @@ import { PageHeaderComponent } from '../../../shared/components/page-header/page
                 </div>
                 <div class="popup-row">
                   <span class="popup-label">Status</span>
-                  <span class="popup-value" [ngClass]="'text-status-' + selectedStore.status?.toLowerCase()">{{ selectedStore.status }}</span>
+                  <span class="popup-value" [ngClass]="'text-status-' + selectedStore.status.toLowerCase()">{{ selectedStore.status }}</span>
                 </div>
                 <div class="popup-row">
                   <span class="popup-label">Owner</span>

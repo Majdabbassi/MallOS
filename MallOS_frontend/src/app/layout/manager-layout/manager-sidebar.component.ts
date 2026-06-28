@@ -27,6 +27,7 @@ import { Observable } from 'rxjs';
 
       <div class="mall-info" *ngIf="!(collapsed$ | async)">
         <div class="mall-pill">
+          <span class="live-dot"></span>
           <i class="pi pi-map-marker"></i>
           <span>{{ mallName }}</span>
         </div>
@@ -225,6 +226,19 @@ import { Observable } from 'rxjs';
       font-weight: 500;
     }
 
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10B981;
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+
     .sidebar-nav {
       flex: 1;
       padding: 16px;
@@ -259,18 +273,19 @@ import { Observable } from 'rxjs';
     }
 
     .nav-item:hover:not(.disabled) {
-      background: var(--color-bg-elevated);
+      background: rgba(255, 255, 255, 0.04);
       color: var(--color-text-primary);
     }
 
     .nav-item.active {
-      background: rgba(79, 142, 247, 0.15);
-      color: var(--color-primary);
+      background: rgba(79, 142, 247, 0.12);
+      border-left: 3px solid #4F8EF7;
+      color: #4F8EF7;
     }
 
     .nav-item.disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
+      opacity: 0.45;
+      cursor: pointer;
     }
 
     .nav-item i {
@@ -290,12 +305,12 @@ import { Observable } from 'rxjs';
 
     .soon-badge {
       margin-left: auto;
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 600;
-      padding: 2px 6px;
-      background: var(--color-bg-elevated);
-      border-radius: var(--radius-sm);
-      color: var(--color-text-muted);
+      padding: 1px 5px;
+      background: rgba(124, 58, 237, 0.2);
+      border-radius: 4px;
+      color: #c4b5fd;
     }
 
     .sidebar-footer {

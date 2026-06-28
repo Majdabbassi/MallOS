@@ -133,3 +133,19 @@
 .dots-grid {
   animation: dotsFloat 3s ease-in-out infinite;
 }
+
+// Page Enter Animation
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-enter {
+  animation: pageEnter 0.2s ease forwards;
+}

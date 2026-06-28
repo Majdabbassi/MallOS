@@ -39,6 +39,16 @@ import { Store, StoreStatus, StoreCategory } from '../../../../core/models/store
         </button>
       </div>
 
+      <div class="occupancy-bar-section" *ngIf="!loading">
+        <div class="occupancy-info">
+          <span class="occupancy-text">{{ occupiedCount }} / {{ totalCount }} stores occupied</span>
+          <span class="occupancy-pct">{{ occupancyPct }}% occupancy</span>
+        </div>
+        <div class="occupancy-track">
+          <div class="occupancy-fill" [style.width]="occupancyPct + '%'"></div>
+        </div>
+      </div>
+
       <div class="filters">
         <p-dropdown
           [options]="categoryOptions"
@@ -148,6 +158,47 @@ import { Store, StoreStatus, StoreCategory } from '../../../../core/models/store
       margin-bottom: 24px;
     }
 
+    .occupancy-bar-section {
+      margin-bottom: 24px;
+      padding: 16px;
+      background: var(--color-bg-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg);
+    }
+
+    .occupancy-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .occupancy-text {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--color-text-primary);
+    }
+
+    .occupancy-pct {
+      font-size: 14px;
+      font-weight: 600;
+      color: #10B981;
+    }
+
+    .occupancy-track {
+      height: 6px;
+      background: #1C2333;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .occupancy-fill {
+      height: 100%;
+      background: #10B981;
+      border-radius: 3px;
+      transition: width 0.6s ease;
+    }
+
     .code-badge {
       font-family: var(--font-mono);
       font-size: 12px;
@@ -195,6 +246,9 @@ export class StoreListComponent implements OnInit {
   selectedCategory: StoreCategory | null = null;
   selectedStatus: StoreStatus | null = null;
   searchQuery = '';
+  occupiedCount = 0;
+  totalCount = 0;
+  occupancyPct = 0;
   categoryOptions = [
     { label: 'All Categories', value: null },
     { label: 'Fashion', value: 'FASHION' },
@@ -227,10 +281,17 @@ export class StoreListComponent implements OnInit {
     this.storeService.getAll().subscribe(stores => {
       this.stores = stores;
       this.filteredStores = [...stores];
+      this.calculateOccupancy();
       setTimeout(() => {
         this.loading = false;
       }, 600);
     });
+  }
+
+  calculateOccupancy(): void {
+    this.totalCount = this.stores.length;
+    this.occupiedCount = this.stores.filter(s => s.status === 'OPEN').length;
+    this.occupancyPct = this.totalCount > 0 ? Math.round((this.occupiedCount / this.totalCount) * 100) : 0;
   }
 
   filterStores(): void {

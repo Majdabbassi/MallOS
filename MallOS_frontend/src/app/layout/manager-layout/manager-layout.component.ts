@@ -13,7 +13,7 @@ import { ManagerTopbarComponent } from './manager-topbar.component';
       <app-manager-sidebar></app-manager-sidebar>
       <div class="manager-main">
         <app-manager-topbar></app-manager-topbar>
-        <div class="manager-content page-content">
+        <div class="manager-content page-enter">
           <router-outlet></router-outlet>
         </div>
       </div>

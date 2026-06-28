@@ -81,18 +81,22 @@ import { UIService } from '../../../core/services/ui.service';
   `,
   styles: [`
     .login-container {
-      width: 100%;
-      max-width: 400px;
-      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0A0F1E;
+      padding: 24px;
     }
 
     .login-card {
-      background: rgba(17, 24, 39, 0.8);
-      backdrop-filter: blur(20px);
-      border: 1px solid var(--color-border);
-      border-radius: var(--radius-xl);
-      padding: 40px;
-      box-shadow: var(--shadow-elevated);
+      width: 100%;
+      max-width: 440px;
+      background: rgba(17, 24, 39, 0.95);
+      border: 1px solid #1F2D45;
+      border-radius: 16px;
+      padding: 48px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
 
     .login-header {
@@ -111,33 +115,35 @@ import { UIService } from '../../../core/services/ui.service';
     .logo-icon {
       width: 48px;
       height: 48px;
-      border-radius: var(--radius-lg);
-      background: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+      border-radius: 12px;
+      background: linear-gradient(135deg, #4F8EF7, #7C3AED);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
       font-size: 24px;
+      font-weight: 700;
+      font-family: 'Space Grotesk', sans-serif;
     }
 
     .logo-text {
       font-size: 28px;
       font-weight: 700;
-      font-family: var(--font-display);
-      color: var(--color-text-primary);
+      font-family: 'Space Grotesk', sans-serif;
+      color: #fff;
       margin: 0;
     }
 
     .login-title {
       font-size: 24px;
       font-weight: 600;
-      color: var(--color-text-primary);
+      color: #fff;
       margin: 0 0 8px 0;
     }
 
     .login-subtitle {
       font-size: 14px;
-      color: var(--color-text-secondary);
+      color: #9CA3AF;
       margin: 0;
     }
 
@@ -156,12 +162,33 @@ import { UIService } from '../../../core/services/ui.service';
     .form-group label {
       font-size: 14px;
       font-weight: 500;
-      color: var(--color-text-primary);
+      color: #E5E7EB;
     }
 
     .form-group label::after {
       content: ' *';
-      color: var(--color-danger);
+      color: #EF4444;
+    }
+
+    .input {
+      height: 44px;
+      background: #0A0F1E;
+      border: 1px solid #1F2D45;
+      border-radius: 8px;
+      padding: 0 16px;
+      color: #fff;
+      font-size: 14px;
+      transition: all 0.2s ease;
+    }
+
+    .input:focus {
+      outline: none;
+      border-color: #4F8EF7;
+      box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.15);
+    }
+
+    .input::placeholder {
+      color: #6B7280;
     }
 
     .password-input {
@@ -181,18 +208,18 @@ import { UIService } from '../../../core/services/ui.service';
       height: 32px;
       border: none;
       background: transparent;
-      color: var(--color-text-secondary);
+      color: #6B7280;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: var(--radius-sm);
+      border-radius: 6px;
       transition: all 0.2s ease;
     }
 
     .password-toggle:hover {
-      color: var(--color-text-primary);
-      background: var(--color-bg-elevated);
+      color: #E5E7EB;
+      background: rgba(255, 255, 255, 0.05);
     }
 
     .form-error {
@@ -202,16 +229,32 @@ import { UIService } from '../../../core/services/ui.service';
       padding: 12px;
       background: rgba(239, 68, 68, 0.1);
       border: 1px solid rgba(239, 68, 68, 0.3);
-      border-radius: var(--radius-md);
-      color: var(--color-danger);
+      border-radius: 8px;
+      color: #EF4444;
       font-size: 14px;
     }
 
     .login-btn {
       width: 100%;
-      padding: 12px;
+      height: 44px;
+      background: #4F8EF7;
+      border: none;
+      border-radius: 8px;
+      color: #fff;
       font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
       margin-top: 8px;
+    }
+
+    .login-btn:hover {
+      background: #3D7BE5;
+    }
+
+    .login-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
     }
 
     .login-footer {
@@ -225,12 +268,12 @@ import { UIService } from '../../../core/services/ui.service';
       justify-content: center;
       gap: 8px;
       font-size: 13px;
-      color: var(--color-text-muted);
+      color: #6B7280;
       margin: 0;
     }
 
     .demo-hint i {
-      color: var(--color-primary);
+      color: #4F8EF7;
     }
 
     .shake {
@@ -251,7 +294,7 @@ import { UIService } from '../../../core/services/ui.service';
 
     @media (max-width: 480px) {
       .login-card {
-        padding: 24px;
+        padding: 32px 24px;
       }
 
       .login-title {

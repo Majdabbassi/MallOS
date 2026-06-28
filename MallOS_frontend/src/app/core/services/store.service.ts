@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { Store, StoreCategory, StoreStatus } from '../models/store.model';
 
 @Injectable({
@@ -13,11 +14,9 @@ export class StoreService {
   }
 
   getByMallId(mallId: string): Observable<Store[]> {
-    return new Observable(observer => {
-      const stores = this.stores$.getValue().filter(s => s.mallId === mallId);
-      observer.next(stores);
-      observer.complete();
-    });
+    return this.stores$.pipe(
+      map(stores => stores.filter(s => s.mallId === mallId))
+    );
   }
 
   getById(id: string): Observable<Store | undefined> {

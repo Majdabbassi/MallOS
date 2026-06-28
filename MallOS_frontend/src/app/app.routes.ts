@@ -108,38 +108,47 @@ export const routes: Routes = [
       },
       {
         path: 'tenants',
+        data: { module: 'Tenants', icon: 'ph-buildings' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'employees',
+        data: { module: 'Employees', icon: 'ph-identification-badge' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'assets',
+        data: { module: 'Assets', icon: 'ph-package' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'maintenance',
+        data: { module: 'Maintenance', icon: 'ph-wrench' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'energy',
+        data: { module: 'Energy', icon: 'ph-lightning' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'sales',
+        data: { module: 'Sales', icon: 'ph-chart-line-up' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'visitors',
+        data: { module: 'Visitors', icon: 'ph-users-four' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'parking',
+        data: { module: 'Parking', icon: 'ph-car' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: 'security',
+        data: { module: 'Security', icon: 'ph-shield-check' },
         loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
