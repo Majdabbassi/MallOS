@@ -1,0 +1,264 @@
+// Card Styles
+.card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: var(--spacing-lg);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--color-bg-elevated);
+  }
+}
+
+.card-interactive {
+  position: relative;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: var(--radius-lg);
+    padding: 1px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-accent), var(--color-primary));
+    background-size: 200% 100%;
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: gradient-border 3s linear infinite;
+  }
+
+  &:hover::before {
+    opacity: 1;
+  }
+}
+
+@keyframes gradient-border {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+// Button Styles
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  padding: var(--spacing-sm) var(--spacing-lg);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  outline: none;
+
+  &:focus {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+.btn-primary {
+  background: var(--color-primary);
+  color: white;
+
+  &:hover {
+    background: #3D7BE5;
+    box-shadow: 0 0 20px var(--color-primary-glow);
+  }
+}
+
+.btn-secondary {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+
+  &:hover {
+    background: var(--color-border);
+  }
+}
+
+.btn-danger {
+  background: var(--color-danger);
+  color: white;
+
+  &:hover {
+    background: #DC2626;
+  }
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--color-text-secondary);
+
+  &:hover {
+    background: var(--color-bg-elevated);
+    color: var(--color-text-primary);
+  }
+}
+
+// Badge Styles
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: var(--font-body);
+}
+
+.badge-success {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--color-success);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: var(--color-warning);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--color-danger);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.badge-primary {
+  background: rgba(79, 142, 247, 0.15);
+  color: var(--color-primary);
+  border: 1px solid rgba(79, 142, 247, 0.3);
+}
+
+.badge-accent {
+  background: rgba(124, 58, 237, 0.15);
+  color: var(--color-accent);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+}
+
+.badge-muted {
+  background: rgba(100, 116, 139, 0.15);
+  color: var(--category-other);
+  border: 1px solid rgba(100, 116, 139, 0.3);
+}
+
+// Category Badge Colors
+.badge-fashion { background: rgba(124, 58, 237, 0.15); color: var(--category-fashion); border: 1px solid rgba(124, 58, 237, 0.3); }
+.badge-food-beverage { background: rgba(249, 115, 22, 0.15); color: var(--category-food-beverage); border: 1px solid rgba(249, 115, 22, 0.3); }
+.badge-electronics { background: rgba(59, 130, 246, 0.15); color: var(--category-electronics); border: 1px solid rgba(59, 130, 246, 0.3); }
+.badge-health-beauty { background: rgba(236, 72, 153, 0.15); color: var(--category-health-beauty); border: 1px solid rgba(236, 72, 153, 0.3); }
+.badge-sports { background: rgba(16, 185, 129, 0.15); color: var(--category-sports); border: 1px solid rgba(16, 185, 129, 0.3); }
+.badge-entertainment { background: rgba(234, 179, 8, 0.15); color: var(--category-entertainment); border: 1px solid rgba(234, 179, 8, 0.3); }
+.badge-books-gifts { background: rgba(20, 184, 166, 0.15); color: var(--category-books-gifts); border: 1px solid rgba(20, 184, 166, 0.3); }
+.badge-services { background: rgba(107, 114, 128, 0.15); color: var(--category-services); border: 1px solid rgba(107, 114, 128, 0.3); }
+.badge-other { background: rgba(100, 116, 139, 0.15); color: var(--category-other); border: 1px solid rgba(100, 116, 139, 0.3); }
+
+// Input Styles
+.input {
+  width: 100%;
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  transition: all 0.2s ease;
+
+  &::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px var(--color-primary-glow);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.ng-invalid.ng-touched {
+    border-color: var(--color-danger);
+  }
+}
+
+.input-error {
+  color: var(--color-danger);
+  font-size: 12px;
+  margin-top: var(--spacing-xs);
+}
+
+// Chip Styles
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 4px 12px;
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--color-text-primary);
+}
+
+// Progress Bar
+.progress-bar {
+  height: 8px;
+  background: var(--color-bg-elevated);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+
+  .progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    border-radius: var(--radius-sm);
+    transition: width 0.3s ease;
+  }
+}
+
+// Divider
+.divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--spacing-lg) 0;
+}
+
+// Avatar
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.avatar-lg {
+  width: 64px;
+  height: 64px;
+  font-size: 24px;
+}
+
+.avatar-sm {
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
+}

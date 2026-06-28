@@ -1,0 +1,57 @@
+:root {
+  // Background Colors
+  --color-bg-base: #0A0F1E;
+  --color-bg-surface: #111827;
+  --color-bg-elevated: #1C2333;
+  --color-border: #1F2D45;
+
+  // Brand Colors
+  --color-primary: #4F8EF7;
+  --color-primary-glow: rgba(79, 142, 247, 0.15);
+  --color-accent: #7C3AED;
+
+  // Status Colors
+  --color-success: #10B981;
+  --color-warning: #F59E0B;
+  --color-danger: #EF4444;
+
+  // Text Colors
+  --color-text-primary: #F1F5F9;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #475569;
+
+  // Category Colors
+  --category-fashion: #7C3AED;
+  --category-food-beverage: #F97316;
+  --category-electronics: #3B82F6;
+  --category-health-beauty: #EC4899;
+  --category-sports: #10B981;
+  --category-entertainment: #EAB308;
+  --category-books-gifts: #14B8A6;
+  --category-services: #6B7280;
+  --category-other: #64748B;
+
+  // Spacing
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+
+  // Border Radius
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  // Shadows
+  --shadow-card: 0 0 0 1px var(--color-border), 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 0 0 1px var(--color-border), 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  // Layout
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
+  --content-max-width: 1280px;
+  --table-row-height: 48px;
+}
