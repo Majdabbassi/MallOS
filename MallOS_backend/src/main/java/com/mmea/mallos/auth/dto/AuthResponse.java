@@ -11,7 +11,15 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AuthResponse {
     private String message;
+    private Long id;
     private String username;
+    private String email;
     private String role;
     private boolean authenticated;
+    private Long mallId;
+    private String fullName;
+    private String phone;
+    private String avatar;
+    private String createdAt;
+    private String lastLogin;
 }

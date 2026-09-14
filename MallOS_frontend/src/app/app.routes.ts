@@ -71,6 +71,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/manager/overview/manager-overview.component').then(m => m.ManagerOverviewComponent)
       },
       {
+        path: 'floor-plan',
+        loadComponent: () => import('./features/manager/floor-map-viewer/floor-map-viewer.component').then(m => m.FloorMapViewerComponent)
+      },
+      {
+        path: 'floor-plan/new',
+        loadComponent: () => import('./features/manager/floor-new/floor-new.component').then(m => m.FloorNewComponent)
+      },
+      {
+        path: 'floor-plan/edit/:floorId',
+        loadComponent: () => import('./features/manager/floor-trace-editor/floor-trace-editor.component').then(m => m.FloorTraceEditorComponent)
+      },
+      {
         path: 'stores',
         loadComponent: () => import('./features/manager/stores/store-list/store-list.component').then(m => m.StoreListComponent)
       },

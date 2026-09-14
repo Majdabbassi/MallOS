@@ -305,9 +305,15 @@ export class StoreEditComponent implements OnInit {
 
     this.isLoading = true;
 
-    this.storeService.update(this.store.id, this.storeForm.value);
-    this.uiService.showSuccess('Store updated successfully');
-    this.router.navigate(['/mall/stores', this.store.id]);
+    this.storeService.update(this.store.id, this.storeForm.value).subscribe({
+      next: () => {
+        this.uiService.showSuccess('Store updated successfully');
+        this.router.navigate(['/mall/stores', this.store!.id]);
+      },
+      error: () => {
+        this.isLoading = false;
+      }
+    });
   }
 
   goBack(): void {

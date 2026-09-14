@@ -44,6 +44,10 @@ import { Observable } from 'rxjs';
             <i class="ph ph-cube"></i>
             <span *ngIf="!(collapsed$ | async)">3D Mall View</span>
           </a>
+          <a routerLink="/mall/floor-plan" routerLinkActive="active" class="nav-item">
+            <i class="ph ph-map-trifold"></i>
+            <span *ngIf="!(collapsed$ | async)">Interactive Map</span>
+          </a>
         </div>
 
         <div class="nav-section">

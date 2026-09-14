@@ -3,6 +3,8 @@ package com.mmea.mallos.auth.service;
 import com.mmea.mallos.auth.dto.AuthResponse;
 import com.mmea.mallos.auth.dto.LoginRequest;
 import com.mmea.mallos.auth.dto.RegisterRequest;
+import com.mmea.mallos.mall.model.MallMember;
+import com.mmea.mallos.mall.repository.MallMemberRepository;
 import com.mmea.mallos.user.model.User;
 import com.mmea.mallos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
+    private final MallMemberRepository mallMemberRepository;
 
     public AuthResponse registerUser(RegisterRequest request) {
         if (userRepository.findByUsername(request.getUsername()).isPresent()) {
@@ -55,14 +58,28 @@ public class AuthService {
                 )
         );
 
-        User user = userRepository.findByUsername(request.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User user = findUserByUsernameOrEmail(request.getUsername());
+        Long mallId = mallMemberRepository.findFirstByUserIdAndIsActiveTrue(user.getId())
+                .map(MallMember::getMall)
+                .map(mall -> mall.getId())
+                .orElse(null);
 
         return AuthResponse.builder()
                 .message("Login successful")
+                .id(user.getId())
                 .username(user.getUsername())
+                .email(user.getEmail())
                 .role(user.getRole().name())
                 .authenticated(authentication.isAuthenticated())
+                .mallId(mallId)
+                .fullName(user.getUsername())
+                .createdAt(user.getCreatedAt() != null ? user.getCreatedAt().toString() : null)
                 .build();
+    }
+
+    private User findUserByUsernameOrEmail(String usernameOrEmail) {
+        return userRepository.findByUsername(usernameOrEmail)
+                .or(() -> userRepository.findByEmail(usernameOrEmail))
+                .orElseThrow(() -> new RuntimeException("User not found"));
     }
 }

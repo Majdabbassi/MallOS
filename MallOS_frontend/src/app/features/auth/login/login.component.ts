@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { finalize } from 'rxjs/operators';
 import { AuthService } from '../../../core/services/auth.service';
 import { UIService } from '../../../core/services/ui.service';
 
@@ -25,17 +26,17 @@ import { UIService } from '../../../core/services/ui.service';
 
         <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
           <div class="form-group">
-            <label for="email">Email</label>
+            <label for="email">Email or username</label>
             <input
               id="email"
-              type="email"
+              type="text"
               formControlName="email"
               class="input"
-              placeholder="Enter your email"
+              placeholder="Enter your email or username"
               [class.ng-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
             />
             <div class="input-error" *ngIf="loginForm.get('email')?.invalid && attemptedSubmit">
-              Please enter a valid email address
+              Please enter your email or username
             </div>
           </div>
 
@@ -69,13 +70,6 @@ import { UIService } from '../../../core/services/ui.service';
             <span>{{ isLoading ? 'Signing in...' : 'Sign in' }}</span>
           </button>
         </form>
-
-        <div class="login-footer">
-          <p class="demo-hint">
-            <i class="pi pi-info-circle"></i>
-            Demo: admin&#64;mallas.com / Admin&#64;123
-          </p>
-        </div>
       </div>
     </div>
   `,
@@ -257,24 +251,6 @@ import { UIService } from '../../../core/services/ui.service';
       cursor: not-allowed;
     }
 
-    .login-footer {
-      margin-top: 24px;
-      text-align: center;
-    }
-
-    .demo-hint {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      font-size: 13px;
-      color: #6B7280;
-      margin: 0;
-    }
-
-    .demo-hint i {
-      color: #4F8EF7;
-    }
 
     .shake {
       animation: shake 0.3s ease-in-out;
@@ -318,7 +294,8 @@ export class LoginComponent {
     private uiService: UIService
   ) {
     this.loginForm = this.fb.group({
-      email: ['', [Validators.required, Validators.email]],
+      // accepts either an email address or a username
+      email: ['', [Validators.required]],
       password: ['', Validators.required]
     });
   }
@@ -336,32 +313,32 @@ export class LoginComponent {
     }
 
     this.isLoading = true;
-
     const { email, password } = this.loginForm.value;
 
-    // Simulate network delay
-    setTimeout(() => {
-      const success = this.auth.login(email, password);
+    this.auth.login(email, password)
+      .pipe(finalize(() => {
+        this.isLoading = false;
+      }))
+      .subscribe({
+        next: user => {
+          this.uiService.showSuccess('Welcome back!');
+          if (user?.role === 'SUPER_ADMIN') {
+            this.router.navigate(['/admin/dashboard']);
+          } else if (user?.role === 'MALL_MANAGER' || user?.role === 'MALL_USER') {
+            this.router.navigate(['/mall/dashboard']);
+          } else {
+            this.router.navigate(['/']);
+          }
+        },
+        error: () => {
+          this.hasError = true;
+          this.errorMessage = 'Invalid email or password';
+          this.uiService.showError('Invalid credentials');
 
-      if (success) {
-        this.uiService.showSuccess('Welcome back!');
-        const user = this.auth.user;
-        if (user?.role === 'SUPER_ADMIN') {
-          this.router.navigate(['/admin/dashboard']);
-        } else if (user?.role === 'MALL_MANAGER') {
-          this.router.navigate(['/mall/dashboard']);
+          setTimeout(() => {
+            this.hasError = false;
+          }, 300);
         }
-      } else {
-        this.hasError = true;
-        this.errorMessage = 'Invalid email or password';
-        this.uiService.showError('Invalid credentials');
-        
-        setTimeout(() => {
-          this.hasError = false;
-        }, 300);
-      }
-
-      this.isLoading = false;
-    }, 500);
+      });
   }
 }

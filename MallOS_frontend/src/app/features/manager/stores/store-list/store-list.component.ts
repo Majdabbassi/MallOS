@@ -319,9 +319,15 @@ export class StoreListComponent implements OnInit {
 
   deleteStore(store: Store): void {
     if (confirm(`Delete store "${store.name}"? This action cannot be undone.`)) {
-      this.storeService.delete(store.id);
-      this.uiService.showSuccess('Store deleted successfully');
-      this.loadStores();
+      this.storeService.delete(store.id).subscribe({
+        next: () => {
+          this.uiService.showSuccess('Store deleted successfully');
+          this.loadStores();
+        },
+        error: (err) => {
+          this.uiService.showError(err.error?.message || 'Failed to delete store');
+        }
+      });
     }
   }
 }

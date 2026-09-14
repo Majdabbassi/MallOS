@@ -1,136 +1,60 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
-import { Mall, MallStatus } from '../models/mall.model';
-import { DEMO_USERS } from './auth.service';
+import { Observable, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Mall } from '../models/mall.model';
+import { AuthService } from './auth.service';
 
-const DEMO_MALLS: Mall[] = [
-  {
-    id: 'm-001',
-    name: 'City Center Mall',
-    address: '45 Avenue Habib Bourguiba',
-    city: 'Tunis',
-    country: 'Tunisia',
-    companyName: 'City Mall Group SA',
-    managerId: 'u-002',
-    status: 'ACTIVE',
-    totalStores: 12,
-    occupiedStores: 10,
-    totalAssistants: 3,
-    totalArea: 45000,
-    openedYear: 2019,
-    phone: '+216 71 800 100',
-    email: 'contact@citymall.tn',
-    website: 'www.citymall.tn',
-    floorCount: 3,
-    visitorsToday: 8142,
-    salesToday: 128430,
-    createdAt: '2024-03-10T00:00:00Z'
-  },
-  {
-    id: 'm-002',
-    name: 'Lac Prestige Mall',
-    address: 'Les Berges du Lac 2',
-    city: 'Tunis',
-    country: 'Tunisia',
-    companyName: 'Lac Invest SARL',
-    managerId: 'u-003',
-    status: 'PENDING',
-    totalStores: 6,
-    occupiedStores: 4,
-    totalAssistants: 1,
-    totalArea: 28000,
-    openedYear: 2022,
-    phone: '+216 71 900 200',
-    email: 'contact@lacmall.tn',
-    floorCount: 2,
-    visitorsToday: 0,
-    salesToday: 0,
-    createdAt: '2024-05-20T00:00:00Z'
-  },
-  {
-    id: 'm-003',
-    name: 'Sousse Marina Mall',
-    address: 'Port El Kantaoui',
-    city: 'Sousse',
-    country: 'Tunisia',
-    companyName: 'Marina Invest Group',
-    managerId: '',
-    status: 'INACTIVE',
-    totalStores: 0,
-    occupiedStores: 0,
-    totalAssistants: 0,
-    totalArea: 32000,
-    openedYear: 2023,
-    phone: '+216 73 500 300',
-    email: 'contact@sousse-marina.tn',
-    floorCount: 2,
-    visitorsToday: 0,
-    salesToday: 0,
-    createdAt: '2024-06-01T00:00:00Z'
-  }
-];
+const API_BASE = 'http://localhost:8080';
 
 @Injectable({
   providedIn: 'root'
 })
 export class MallService {
-  private malls$ = new BehaviorSubject<Mall[]>(DEMO_MALLS);
+  constructor(private http: HttpClient, private auth: AuthService) {}
+
+  private get headers(): HttpHeaders {
+    const userId = (this.auth.user as any)?.id ?? 0;
+    return new HttpHeaders({ 'X-User-Id': String(userId) });
+  }
 
   getAll(): Observable<Mall[]> {
-    return this.malls$.asObservable();
+    return this.http.get<Mall[]>(`${API_BASE}/malls`, { headers: this.headers }).pipe(
+      catchError(() => of([]))
+    );
   }
 
   getById(id: string): Observable<Mall | undefined> {
-    return new Observable(observer => {
-      const mall = this.malls$.getValue().find(m => m.id === id);
-      observer.next(mall);
-      observer.complete();
-    });
+    return this.http.get<Mall>(`${API_BASE}/malls/${id}`, { headers: this.headers }).pipe(
+      catchError(() => of(undefined))
+    );
   }
 
-  create(mall: Omit<Mall, 'id' | 'createdAt'>): void {
-    const newMall: Mall = {
-      ...mall,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      visitorsToday: 0,
-      salesToday: 0
-    };
-    const current = this.malls$.getValue();
-    this.malls$.next([...current, newMall]);
+  create(mall: Omit<Mall, 'id' | 'createdAt'>): Observable<Mall> {
+    return this.http.post<Mall>(`${API_BASE}/malls`, mall, { headers: this.headers });
   }
 
-  update(id: string, data: Partial<Mall>): void {
-    const current = this.malls$.getValue();
-    const index = current.findIndex(m => m.id === id);
-    if (index !== -1) {
-      const updated = [...current];
-      updated[index] = { ...updated[index], ...(data as any) };
-      this.malls$.next(updated);
-    }
+  update(id: string, data: Partial<Mall>): Observable<any> {
+    return this.http.put(`${API_BASE}/malls/${id}`, data, { headers: this.headers }).pipe(
+      catchError(() => of(null))
+    );
   }
 
-  delete(id: string): void {
-    const current = this.malls$.getValue();
-    this.malls$.next(current.filter(m => m.id !== id));
+  delete(id: string): Observable<any> {
+    return this.http.delete(`${API_BASE}/malls/${id}`, { headers: this.headers }).pipe(
+      catchError(() => of(null))
+    );
   }
 
   getByManagerId(managerId: string): Observable<Mall[]> {
-    return new Observable(observer => {
-      const malls = this.malls$.getValue().filter(m => m.managerId === managerId);
-      observer.next(malls);
-      observer.complete();
-    });
+    return this.http.get<Mall[]>(`${API_BASE}/malls?managerId=${managerId}`, { headers: this.headers }).pipe(
+      catchError(() => of([]))
+    );
   }
 
   getManagersWithoutMall(): Observable<any[]> {
-    return new Observable(observer => {
-      const managerIds = this.malls$.getValue().map(m => m.managerId);
-      const availableManagers = DEMO_USERS.filter(
-        (u: any) => u.role === 'MALL_MANAGER' && !managerIds.includes(u.id)
-      );
-      observer.next(availableManagers);
-      observer.complete();
-    });
+    return this.http.get<any[]>(`${API_BASE}/api/users?role=MALL_USER&unassigned=true`, { headers: this.headers }).pipe(
+      catchError(() => of([]))
+    );
   }
 }

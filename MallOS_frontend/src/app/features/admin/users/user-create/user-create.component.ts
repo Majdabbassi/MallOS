@@ -3,13 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../../../core/services/auth.service';
+import { UserService } from '../../../../core/services/user.service';
 import { UIService } from '../../../../core/services/ui.service';
-import { MallService } from '../../../../core/services/mall.service';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { PasswordModule } from 'primeng/password';
 import { DropdownModule } from 'primeng/dropdown';
 import { UserRole } from '../../../../core/models/user.model';
+import { MallService } from '../../../../core/services/mall.service';
 
 @Component({
   selector: 'app-user-create',
@@ -72,7 +73,7 @@ import { UserRole } from '../../../../core/models/user.model';
               <div class="input-error" *ngIf="userForm.get('role')?.invalid && attemptedSubmit">Role is required</div>
             </div>
 
-            <div class="form-group" *ngIf="userForm.get('role')?.value === 'MALL_MANAGER'">
+            <div class="form-group" *ngIf="userForm.get('role')?.value === 'MALL_USER' || userForm.get('role')?.value === 'MALL_MANAGER'">
               <label for="mallId">Assign Mall</label>
               <p-dropdown
                 id="mallId"
@@ -206,7 +207,7 @@ export class UserCreateComponent {
   availableMalls: any[] = [];
   roleOptions = [
     { label: 'Super Admin', value: 'SUPER_ADMIN' },
-    { label: 'Mall Manager', value: 'MALL_MANAGER' }
+    { label: 'Mall Manager', value: 'MALL_USER' }
   ];
 
   constructor(
@@ -214,7 +215,8 @@ export class UserCreateComponent {
     private auth: AuthService,
     private router: Router,
     private uiService: UIService,
-    private mallService: MallService
+    private mallService: MallService,
+    private userService: UserService
   ) {
     this.userForm = this.fb.group({
       fullName: ['', Validators.required],
@@ -235,7 +237,7 @@ export class UserCreateComponent {
   }
 
   onRoleChange(): void {
-    if (this.userForm.get('role')?.value !== 'MALL_MANAGER') {
+    if (this.userForm.get('role')?.value !== 'MALL_USER' && this.userForm.get('role')?.value !== 'MALL_MANAGER') {
       this.userForm.get('mallId')?.setValue('');
     }
   }
@@ -250,15 +252,20 @@ export class UserCreateComponent {
     this.isLoading = true;
 
     const formValue = this.userForm.value;
-    const newUser = {
-      ...formValue,
-      id: crypto.randomUUID(),
-      createdAt: new Date().toISOString(),
-      lastLogin: null
-    };
-
-    this.uiService.showSuccess('User created successfully');
-    this.router.navigate(['/admin/users']);
+    this.userService.create({
+      username: formValue.email,
+      email: formValue.email,
+      password: formValue.password,
+      role: formValue.role === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'MALL_USER'
+    }).subscribe(created => {
+      this.isLoading = false;
+      if (created) {
+        this.uiService.showSuccess('User created successfully');
+        this.router.navigate(['/admin/users']);
+      } else {
+        this.uiService.showSuccess('User creation failed');
+      }
+    });
   }
 
   goBack(): void {

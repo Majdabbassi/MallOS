@@ -1,8 +1,24 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { BehaviorSubject, Observable, map } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
 import { User, UserRole } from '../models/user.model';
 
+const API_BASE = 'http://localhost:8080';
 const STORAGE_KEY = 'mall_os_user';
+
+interface AuthResponse {
+  id: number | string;
+  username: string;
+  email?: string;
+  role: UserRole;
+  authenticated: boolean;
+  mallId?: number;
+  fullName?: string;
+  phone?: string;
+  avatar?: string;
+  createdAt?: string;
+  lastLogin?: string;
+}
 
 @Injectable({
   providedIn: 'root'
@@ -10,7 +26,7 @@ const STORAGE_KEY = 'mall_os_user';
 export class AuthService {
   private currentUser$ = new BehaviorSubject<User | null>(null);
 
-  constructor() {
+  constructor(private http: HttpClient) {
     this.restoreSession();
   }
 
@@ -22,16 +38,30 @@ export class AuthService {
     return this.currentUser$.asObservable();
   }
 
-  login(email: string, password: string): boolean {
-    const user = DEMO_USERS.find(u => u.email === email && u.password === password);
-    if (user) {
-      const userWithoutPassword = { ...user };
-      delete (userWithoutPassword as any).password;
-      this.currentUser$.next(userWithoutPassword);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(userWithoutPassword));
-      return true;
-    }
-    return false;
+  login(email: string, password: string): Observable<User> {
+    return this.http.post<AuthResponse>(`${API_BASE}/auth/login`, {
+      username: email,
+      password
+    }).pipe(
+      map(response => {
+        const user: User = {
+          id: String(response.id),
+          fullName: response.fullName || response.username || response.email || '',
+          email: response.email || email,
+          password: '',
+          role: response.role,
+          mallId: response.mallId ? String(response.mallId) : undefined,
+          avatar: response.avatar,
+          phone: response.phone,
+          createdAt: response.createdAt || new Date().toISOString(),
+          lastLogin: response.lastLogin
+        };
+
+        this.currentUser$.next(user);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+        return user;
+      })
+    );
   }
 
   logout(): void {
@@ -56,7 +86,7 @@ export class AuthService {
   }
 
   isManager(): boolean {
-    return this.user?.role === 'MALL_MANAGER';
+    return this.user?.role === 'MALL_MANAGER' || this.user?.role === 'MALL_USER';
   }
 
   updateUser(user: User): void {
@@ -67,36 +97,3 @@ export class AuthService {
   }
 }
 
-export const DEMO_USERS: User[] = [
-  {
-    id: 'u-001',
-    fullName: 'Sami Arfaoui',
-    email: 'admin@mallas.com',
-    password: 'Admin@123',
-    role: 'SUPER_ADMIN',
-    phone: '+216 71 000 000',
-    createdAt: '2024-01-01T00:00:00Z',
-    lastLogin: new Date().toISOString()
-  },
-  {
-    id: 'u-002',
-    fullName: 'Ahmed Ben Salah',
-    email: 'manager@citymall.tn',
-    password: 'Manager@123',
-    role: 'MALL_MANAGER',
-    mallId: 'm-001',
-    phone: '+216 55 123 456',
-    createdAt: '2024-03-10T00:00:00Z',
-    lastLogin: new Date().toISOString()
-  },
-  {
-    id: 'u-003',
-    fullName: 'Ines Gharbi',
-    email: 'manager@lacmall.tn',
-    password: 'Manager@123',
-    role: 'MALL_MANAGER',
-    mallId: 'm-002',
-    phone: '+216 50 987 654',
-    createdAt: '2024-05-20T00:00:00Z'
-  }
-];

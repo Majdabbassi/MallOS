@@ -298,9 +298,15 @@ export class StoreCreateComponent {
       createdAt: new Date().toISOString()
     };
 
-    this.storeService.create(newStore);
-    this.uiService.showSuccess('Store added successfully');
-    this.router.navigate(['/mall/stores']);
+    this.storeService.create(newStore).subscribe({
+      next: () => {
+        this.uiService.showSuccess('Store added successfully');
+        this.router.navigate(['/mall/stores']);
+      },
+      error: () => {
+        this.isLoading = false;
+      }
+    });
   }
 
   goBack(): void {

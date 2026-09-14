@@ -9,12 +9,13 @@ import { InputTextModule } from 'primeng/inputtext';
 import { TagModule } from 'primeng/tag';
 import { ChipModule } from 'primeng/chip';
 import { AuthService } from '../../../../core/services/auth.service';
+import { UserService } from '../../../../core/services/user.service';
 import { UIService } from '../../../../core/services/ui.service';
-import { MallService } from '../../../../core/services/mall.service';
 import { AvatarComponent } from '../../../../shared/components/avatar/avatar.component';
 import { SkeletonTableComponent } from '../../../../shared/components/skeleton-table/skeleton-table.component';
 import { EmptyStateComponent } from '../../../../shared/components/empty-state/empty-state.component';
 import { User, UserRole } from '../../../../core/models/user.model';
+import { MallService } from '../../../../core/services/mall.service';
 
 @Component({
   selector: 'app-user-list',
@@ -199,14 +200,15 @@ export class UserListComponent implements OnInit {
   roleOptions = [
     { label: 'All Roles', value: null },
     { label: 'Super Admin', value: 'SUPER_ADMIN' },
-    { label: 'Mall Manager', value: 'MALL_MANAGER' }
+    { label: 'Mall Manager', value: 'MALL_USER' }
   ];
 
   constructor(
     private auth: AuthService,
     private router: Router,
     private uiService: UIService,
-    private mallService: MallService
+    private mallService: MallService,
+    private userService: UserService
   ) {}
 
   ngOnInit(): void {
@@ -215,11 +217,13 @@ export class UserListComponent implements OnInit {
   }
 
   loadUsers(): void {
-    this.users = (this.auth as any).DEMO_USERS || [];
-    this.filteredUsers = [...this.users];
-    setTimeout(() => {
-      this.loading = false;
-    }, 600);
+    this.userService.getAll().subscribe(users => {
+      this.users = users || [];
+      this.filteredUsers = [...this.users];
+      setTimeout(() => {
+        this.loading = false;
+      }, 600);
+    });
   }
 
   loadMalls(): void {
@@ -240,7 +244,7 @@ export class UserListComponent implements OnInit {
 
   getRoleClass(role: UserRole): string {
     if (role === 'SUPER_ADMIN') return 'accent';
-    if (role === 'MALL_MANAGER') return 'primary';
+    if (role === 'MALL_MANAGER' || role === 'MALL_USER') return 'primary';
     return 'muted';
   }
 
