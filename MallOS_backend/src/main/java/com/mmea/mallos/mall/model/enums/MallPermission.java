@@ -7,5 +7,7 @@ public enum MallPermission {
     EDIT_REPORTS,
     MANAGE_ORDERS,
     VIEW_FINANCE,
-    MANAGE_FINANCE
+    MANAGE_FINANCE,
+    MANAGE_STORES,
+    MANAGE_FLOORPLAN
 }

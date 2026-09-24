@@ -23,34 +23,6 @@ export const routes: Routes = [
         loadComponent: () => import('./features/admin/dashboard/admin-dashboard.component').then(m => m.AdminDashboardComponent)
       },
       {
-        path: 'malls',
-        loadComponent: () => import('./features/admin/malls/mall-list/mall-list.component').then(m => m.MallListComponent)
-      },
-      {
-        path: 'malls/create',
-        loadComponent: () => import('./features/admin/malls/mall-create/mall-create.component').then(m => m.MallCreateComponent)
-      },
-      {
-        path: 'malls/:id',
-        loadComponent: () => import('./features/admin/malls/mall-detail/mall-detail.component').then(m => m.MallDetailComponent)
-      },
-      {
-        path: 'malls/:id/edit',
-        loadComponent: () => import('./features/admin/malls/mall-edit/mall-edit.component').then(m => m.MallEditComponent)
-      },
-      {
-        path: 'users',
-        loadComponent: () => import('./features/admin/users/user-list/user-list.component').then(m => m.UserListComponent)
-      },
-      {
-        path: 'users/create',
-        loadComponent: () => import('./features/admin/users/user-create/user-create.component').then(m => m.UserCreateComponent)
-      },
-      {
-        path: 'users/:id/edit',
-        loadComponent: () => import('./features/admin/users/user-edit/user-edit.component').then(m => m.UserEditComponent)
-      },
-      {
         path: '',
         redirectTo: '/admin/dashboard',
         pathMatch: 'full'
@@ -65,10 +37,6 @@ export const routes: Routes = [
       {
         path: 'dashboard',
         loadComponent: () => import('./features/manager/dashboard/manager-dashboard.component').then(m => m.ManagerDashboardComponent)
-      },
-      {
-        path: 'overview',
-        loadComponent: () => import('./features/manager/overview/manager-overview.component').then(m => m.ManagerOverviewComponent)
       },
       {
         path: 'floor-plan',
@@ -99,69 +67,8 @@ export const routes: Routes = [
         loadComponent: () => import('./features/manager/stores/store-edit/store-edit.component').then(m => m.StoreEditComponent)
       },
       {
-        path: 'assistants',
-        loadComponent: () => import('./features/manager/assistants/assistant-list/assistant-list.component').then(m => m.AssistantListComponent)
-      },
-      {
-        path: 'assistants/create',
-        loadComponent: () => import('./features/manager/assistants/assistant-create/assistant-create.component').then(m => m.AssistantCreateComponent)
-      },
-      {
-        path: 'assistants/:id/edit',
-        loadComponent: () => import('./features/manager/assistants/assistant-edit/assistant-edit.component').then(m => m.AssistantEditComponent)
-      },
-      {
-        path: 'assistants/:id/permissions',
-        loadComponent: () => import('./features/manager/assistants/assistant-permissions/assistant-permissions.component').then(m => m.AssistantPermissionsComponent)
-      },
-      {
         path: 'profile',
         loadComponent: () => import('./features/manager/profile/manager-profile.component').then(m => m.ManagerProfileComponent)
-      },
-      {
-        path: 'tenants',
-        data: { module: 'Tenants', icon: 'ph-buildings' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'employees',
-        data: { module: 'Employees', icon: 'ph-identification-badge' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'assets',
-        data: { module: 'Assets', icon: 'ph-package' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'maintenance',
-        data: { module: 'Maintenance', icon: 'ph-wrench' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'energy',
-        data: { module: 'Energy', icon: 'ph-lightning' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'sales',
-        data: { module: 'Sales', icon: 'ph-chart-line-up' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'visitors',
-        data: { module: 'Visitors', icon: 'ph-users-four' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'parking',
-        data: { module: 'Parking', icon: 'ph-car' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
-      },
-      {
-        path: 'security',
-        data: { module: 'Security', icon: 'ph-shield-check' },
-        loadComponent: () => import('./features/manager/coming-soon/manager-coming-soon.component').then(m => m.ManagerComingSoonComponent)
       },
       {
         path: '',

@@ -4,12 +4,11 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { Router } from '@angular/router';
 import { StoreService } from '../../../../core/services/store.service';
 import { UIService } from '../../../../core/services/ui.service';
-import { AuthService } from '../../../../core/services/auth.service';
 import { ButtonModule } from 'primeng/button';
 import { InputTextModule } from 'primeng/inputtext';
 import { InputNumberModule } from 'primeng/inputnumber';
 import { DropdownModule } from 'primeng/dropdown';
-import { StoreCategory, StoreStatus } from '../../../../core/models/store.model';
+import { CreateStoreRequest } from '../../../../core/models/store.model';
 
 @Component({
   selector: 'app-store-create',
@@ -252,18 +251,17 @@ export class StoreCreateComponent {
     { label: 'Other', value: 'OTHER' }
   ];
   statusOptions = [
-    { label: 'Active', value: 'ACTIVE' },
-    { label: 'Vacant', value: 'VACANT' },
+    { label: 'Open', value: 'OPEN' },
+    { label: 'Closed', value: 'CLOSED' },
     { label: 'Under Renovation', value: 'UNDER_RENOVATION' },
-    { label: 'Maintenance', value: 'MAINTENANCE' }
+    { label: 'Vacant', value: 'VACANT' }
   ];
 
   constructor(
     private fb: FormBuilder,
     private storeService: StoreService,
     private router: Router,
-    private uiService: UIService,
-    private auth: AuthService
+    private uiService: UIService
   ) {
     this.storeForm = this.fb.group({
       code: ['', Validators.required],
@@ -289,13 +287,9 @@ export class StoreCreateComponent {
 
     this.isLoading = true;
 
-    const user = this.auth.user;
     const formValue = this.storeForm.value;
-    const newStore = {
-      ...formValue,
-      id: crypto.randomUUID(),
-      mallId: user?.mallId || '',
-      createdAt: new Date().toISOString()
+    const newStore: CreateStoreRequest = {
+      ...formValue
     };
 
     this.storeService.create(newStore).subscribe({

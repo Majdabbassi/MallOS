@@ -50,13 +50,16 @@ ng build
 
 ## Demo Credentials
 
+Credentials are seeded by the backend on first run when the database is empty
+(see `.env.example`). Log in with the **username**, not the email.
+
 ### Super Admin
-- Email: `admin@mallas.com`
-- Password: `Admin@123`
+- Username: `admin` (`ADMIN_USERNAME`)
+- Password: `change-me` (`ADMIN_PASSWORD`)
 
 ### Mall Manager
-- Email: `manager@mallas.com`
-- Password: `Manager@123`
+- Username: `manager` (`DEMO_MANAGER_USERNAME`)
+- Password: `Manager@123` (`DEMO_MANAGER_PASSWORD`)
 
 ## Project Structure
 

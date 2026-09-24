@@ -6,6 +6,7 @@ import com.mmea.mallos.auth.dto.RegisterRequest;
 import com.mmea.mallos.mall.model.MallMember;
 import com.mmea.mallos.mall.repository.MallMemberRepository;
 import com.mmea.mallos.user.model.User;
+import com.mmea.mallos.user.model.enums.Role;
 import com.mmea.mallos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,11 +33,14 @@ public class AuthService {
             throw new RuntimeException("Email already exists");
         }
 
+        // Self-registration always creates a plain mall user. Privileged roles
+        // (SUPER_ADMIN / managers) are only ever granted server-side, never
+        // from client-supplied input.
         User user = User.builder()
                 .username(request.getUsername())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(Role.MALL_USER)
                 .active(true)
                 .build();
 

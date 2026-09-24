@@ -13,6 +13,8 @@ import com.mmea.mallos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class MallServiceImpl implements MallService {
@@ -41,5 +43,10 @@ public class MallServiceImpl implements MallService {
     public Mall getMall(Long requesterId, Long mallId) {
         permissionService.assertAccess(requesterId, mallId, null);
         return mallRepository.findById(mallId).orElseThrow(MallNotFoundException::new);
+    }
+
+    @Override
+    public List<Mall> listAll() {
+        return mallRepository.findAll();
     }
 }

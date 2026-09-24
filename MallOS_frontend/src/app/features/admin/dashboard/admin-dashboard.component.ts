@@ -1,100 +1,115 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
-import { MallService } from '../../../core/services/mall.service';
+import { FormsModule } from '@angular/forms';
+import { RouterModule } from '@angular/router';
+import { TableModule } from 'primeng/table';
+import { ButtonModule } from 'primeng/button';
+import { InputTextModule } from 'primeng/inputtext';
+import { DialogModule } from 'primeng/dialog';
 import { AuthService } from '../../../core/services/auth.service';
-import { StatsCardComponent } from '../../../shared/components/stats-card/stats-card.component';
-import { SkeletonCardsComponent } from '../../../shared/components/skeleton-cards/skeleton-cards.component';
-import { Observable } from 'rxjs';
+import { MallService } from '../../../core/services/mall.service';
+import { UIService } from '../../../core/services/ui.service';
+import { Mall, CreateMallRequest } from '../../../core/models/mall.model';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, StatsCardComponent, SkeletonCardsComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterModule,
+    TableModule,
+    ButtonModule,
+    InputTextModule,
+    DialogModule
+  ],
   template: `
     <div class="admin-dashboard">
       <div class="dashboard-header">
-        <h1>Dashboard</h1>
-        <p class="text-secondary">Overview of your mall management platform</p>
+        <div>
+          <h1>Dashboard</h1>
+          <p class="text-secondary">Welcome, {{ userName }} — platform administration overview</p>
+        </div>
+        <button pButton type="button" icon="pi pi-plus" label="New Mall" (click)="openCreate()"></button>
       </div>
 
-      <div class="stats-section">
-        <app-skeleton-cards *ngIf="loading" [count]="4"></app-skeleton-cards>
-        <div class="stats-grid" *ngIf="!loading">
-          <app-stats-card
-            [value]="totalMalls"
-            label="Total Malls"
-            icon="pi pi-building"
-            [trend]="{ direction: 'up', value: '+2', label: 'this month' }">
-          </app-stats-card>
-          <app-stats-card
-            [value]="activeMalls"
-            label="Active Malls"
-            icon="pi pi-check-circle"
-            [trend]="{ direction: 'up', value: '+1', label: 'this month' }">
-          </app-stats-card>
-          <app-stats-card
-            [value]="totalManagers"
-            label="Total Managers"
-            icon="pi pi-users"
-            [trend]="{ direction: 'up', value: '+3', label: 'this month' }">
-          </app-stats-card>
-          <app-stats-card
-            [value]="pendingOnboarding"
-            label="Pending Onboarding"
-            icon="pi pi-clock"
-            [trend]="{ direction: 'down', value: '-1', label: 'from last week' }">
-          </app-stats-card>
-        </div>
-      </div>
-
-      <div class="malls-section">
-        <div class="section-header">
-          <h2>Your Malls</h2>
-          <button class="btn btn-primary" (click)="goToCreateMall()">
-            <i class="pi pi-plus"></i>
-            <span>Create Mall</span>
-          </button>
-        </div>
-
-        <div class="malls-grid" *ngIf="!loading">
-          <div class="mall-card card-interactive" *ngFor="let mall of malls" (click)="goToMallDetail(mall.id)">
-            <div class="mall-card-header">
-              <h3>{{ mall.name }}</h3>
-              <span class="badge badge-{{ getStatusClass(mall.status) }}">{{ mall.status }}</span>
-            </div>
-            <div class="mall-card-body">
-              <div class="mall-info">
-                <i class="pi pi-map-marker"></i>
-                <span>{{ mall.city }}, {{ mall.country }}</span>
-              </div>
-              <div class="mall-info">
-                <i class="pi pi-user"></i>
-                <span>{{ getManagerName(mall.managerId) }}</span>
-              </div>
-              <div class="mall-stats">
-                <div class="mall-stat">
-                  <span class="stat-value">{{ mall.totalStores }}</span>
-                  <span class="stat-label">Stores</span>
-                </div>
-                <div class="mall-stat">
-                  <span class="stat-value">{{ mall.occupiedStores }}</span>
-                  <span class="stat-label">Occupied</span>
-                </div>
-              </div>
-              <div class="occupancy-bar">
-                <div class="progress-bar">
-                  <div class="progress-fill" [style.width.%]="getOccupancyPercentage(mall)"></div>
-                </div>
-                <span class="occupancy-text">{{ getOccupancyPercentage(mall) }}% occupied</span>
-              </div>
-            </div>
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-icon"><i class="pi pi-building"></i></div>
+          <div>
+            <div class="stat-value">{{ malls.length }}</div>
+            <div class="stat-label">Malls on the platform</div>
           </div>
         </div>
-
-        <app-skeleton-cards *ngIf="loading" [count]="3"></app-skeleton-cards>
       </div>
+
+      <div class="section-header">
+        <h2>Malls</h2>
+      </div>
+
+      <p-table [value]="malls" [loading]="loading" [paginator]="true" [rows]="10" styleClass="mall-table">
+        <ng-template pTemplate="header">
+          <tr>
+            <th>Name</th>
+            <th>Company</th>
+            <th>Address</th>
+            <th>Tax ID</th>
+            <th>Created</th>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-mall>
+          <tr>
+            <td class="mall-name">{{ mall.name }}</td>
+            <td>{{ mall.companyName }}</td>
+            <td>{{ mall.address }}</td>
+            <td><span class="code-badge">{{ mall.taxId }}</span></td>
+            <td>{{ (mall.createdAt | date: 'mediumDate') || '-' }}</td>
+          </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="5" class="empty-cell">
+              No malls yet. Click <strong>New Mall</strong> to create the first one.
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
     </div>
+
+    <p-dialog
+      header="Create Mall"
+      [(visible)]="dialogVisible"
+      [modal]="true"
+      [style]="{ width: '480px' }">
+      <div class="dialog-form">
+        <div class="form-group">
+          <label for="name">Mall Name *</label>
+          <input id="name" pInputText [(ngModel)]="form.name" placeholder="e.g. Mall of Tunisia" />
+        </div>
+        <div class="form-group">
+          <label for="companyName">Company Name *</label>
+          <input id="companyName" pInputText [(ngModel)]="form.companyName" />
+        </div>
+        <div class="form-group">
+          <label for="address">Address *</label>
+          <input id="address" pInputText [(ngModel)]="form.address" />
+        </div>
+        <div class="form-group">
+          <label for="taxId">Tax ID *</label>
+          <input id="taxId" pInputText [(ngModel)]="form.taxId" />
+        </div>
+      </div>
+      <ng-template pTemplate="footer">
+        <button pButton type="button" label="Cancel" class="p-button-text" (click)="dialogVisible = false"></button>
+        <button
+          pButton
+          type="button"
+          label="Create"
+          icon="pi pi-check"
+          [disabled]="!isFormValid() || saving"
+          (click)="createMall()"></button>
+      </ng-template>
+    </p-dialog>
   `,
   styles: [`
     .admin-dashboard {
@@ -103,6 +118,9 @@ import { Observable } from 'rxjs';
     }
 
     .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
       margin-bottom: 32px;
     }
 
@@ -113,197 +131,157 @@ import { Observable } from 'rxjs';
       margin: 0 0 8px 0;
     }
 
-    .stats-section {
-      margin-bottom: 40px;
-    }
-
-    .stats-grid {
+    .stat-row {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
-    }
-
-    .malls-section {
       margin-bottom: 40px;
     }
 
-    .section-header {
+    .stat-card {
       display: flex;
-      justify-content: space-between;
       align-items: center;
-      margin-bottom: 24px;
-    }
-
-    .section-header h2 {
-      font-size: 24px;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      margin: 0;
-    }
-
-    .malls-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-      gap: 20px;
-    }
-
-    .mall-card {
+      gap: 16px;
+      padding: 24px;
       background: var(--color-bg-surface);
       border: 1px solid var(--color-border);
       border-radius: var(--radius-lg);
-      padding: 20px;
-      cursor: pointer;
-      transition: all 0.3s ease;
     }
 
-    .mall-card:hover {
-      background: var(--color-bg-elevated);
-    }
-
-    .mall-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 16px;
-    }
-
-    .mall-card-header h3 {
-      font-size: 18px;
-      font-weight: 600;
-      color: var(--color-text-primary);
-      margin: 0;
-      flex: 1;
-    }
-
-    .mall-card-body {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .mall-info {
+    .stat-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: var(--radius-md);
+      background: rgba(79, 142, 247, 0.15);
       display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: var(--color-text-secondary);
-    }
-
-    .mall-info i {
-      color: var(--color-text-muted);
-    }
-
-    .mall-stats {
-      display: flex;
-      gap: 24px;
-      padding: 12px 0;
-      border-top: 1px solid var(--color-border);
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    .mall-stat {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
+      justify-content: center;
+      color: var(--color-primary);
+      font-size: 22px;
+      flex-shrink: 0;
     }
 
     .stat-value {
-      font-size: 20px;
-      font-weight: 600;
+      font-size: 28px;
+      font-weight: 700;
       color: var(--color-text-primary);
     }
 
     .stat-label {
-      font-size: 12px;
+      font-size: 13px;
       color: var(--color-text-secondary);
     }
 
-    .occupancy-bar {
+    .section-header {
+      margin-bottom: 16px;
+    }
+
+    .section-header h2 {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--color-text-primary);
+      margin: 0;
+    }
+
+    .mall-name {
+      font-weight: 600;
+      color: var(--color-text-primary);
+    }
+
+    .code-badge {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 2px 8px;
+      background: var(--color-bg-elevated);
+      border-radius: var(--radius-sm);
+      color: var(--color-text-primary);
+    }
+
+    .empty-cell {
+      text-align: center;
+      padding: 32px;
+      color: var(--color-text-secondary);
+    }
+
+    .dialog-form {
       display: flex;
-      align-items: center;
-      gap: 12px;
+      flex-direction: column;
+      gap: 16px;
+      padding-top: 8px;
     }
 
-    .occupancy-bar .progress-bar {
-      flex: 1;
-      height: 6px;
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
 
-    .occupancy-text {
-      font-size: 12px;
+    .form-group label {
+      font-size: 13px;
+      font-weight: 500;
       color: var(--color-text-secondary);
-      white-space: nowrap;
     }
 
-    @media (max-width: 768px) {
-      .section-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 16px;
-      }
-
-      .malls-grid {
-        grid-template-columns: 1fr;
-      }
+    .form-group input {
+      width: 100%;
     }
   `]
 })
 export class AdminDashboardComponent implements OnInit {
+  malls: Mall[] = [];
   loading = true;
-  malls: any[] = [];
-  totalMalls = 0;
-  activeMalls = 0;
-  totalManagers = 0;
-  pendingOnboarding = 0;
+  dialogVisible = false;
+  saving = false;
+  form: CreateMallRequest = this.emptyForm();
 
   constructor(
-    private mallService: MallService,
     private auth: AuthService,
-    private router: Router
+    private mallService: MallService,
+    private uiService: UIService
   ) {}
 
-  ngOnInit(): void {
-    this.loadData();
+  get userName(): string {
+    return this.auth.user?.fullName || 'Super Admin';
   }
 
-  loadData(): void {
+  ngOnInit(): void {
+    this.loadMalls();
+  }
+
+  loadMalls(): void {
+    this.loading = true;
     this.mallService.getAll().subscribe(malls => {
       this.malls = malls;
-      this.totalMalls = malls.length;
-      this.activeMalls = malls.filter(m => m.status === 'ACTIVE').length;
-      this.pendingOnboarding = malls.filter(m => m.status === 'PENDING').length;
-      this.totalManagers = malls.filter(m => m.managerId).length;
-      
-      // Simulate loading
-      setTimeout(() => {
-        this.loading = false;
-      }, 600);
+      this.loading = false;
     });
   }
 
-  getStatusClass(status: string): string {
-    const statusLower = status.toLowerCase();
-    if (statusLower === 'active') return 'success';
-    if (statusLower === 'pending') return 'warning';
-    if (statusLower === 'inactive' || statusLower === 'suspended') return 'danger';
-    return 'muted';
+  openCreate(): void {
+    this.form = this.emptyForm();
+    this.dialogVisible = true;
   }
 
-  getManagerName(managerId: string): string {
-    // This would normally fetch from user service
-    return 'Assigned Manager';
+  isFormValid(): boolean {
+    return !!(this.form.name && this.form.companyName && this.form.address && this.form.taxId);
   }
 
-  getOccupancyPercentage(mall: any): number {
-    if (mall.totalStores === 0) return 0;
-    return Math.round((mall.occupiedStores / mall.totalStores) * 100);
+  createMall(): void {
+    if (!this.isFormValid()) return;
+    this.saving = true;
+    this.mallService.create(this.form).subscribe({
+      next: () => {
+        this.saving = false;
+        this.dialogVisible = false;
+        this.uiService.showSuccess('Mall created successfully');
+        this.loadMalls();
+      },
+      error: () => {
+        this.saving = false;
+      }
+    });
   }
 
-  goToCreateMall(): void {
-    this.router.navigate(['/admin/malls/create']);
-  }
-
-  goToMallDetail(id: string): void {
-    this.router.navigate(['/admin/malls', id]);
+  private emptyForm(): CreateMallRequest {
+    return { name: '', companyName: '', address: '', taxId: '' };
   }
 }

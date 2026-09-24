@@ -16,7 +16,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "stores", indexes = @Index(columnList = "mall_id"))
+@Table(name = "stores",
+        indexes = @Index(columnList = "mall_id"),
+        uniqueConstraints = @UniqueConstraint(name = "uk_stores_mall_code", columnNames = {"mall_id", "code"}))
 @Data
 @Builder
 @NoArgsConstructor

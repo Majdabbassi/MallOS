@@ -252,10 +252,10 @@ export class StoreEditComponent implements OnInit {
     { label: 'Other', value: 'OTHER' }
   ];
   statusOptions = [
-    { label: 'Active', value: 'ACTIVE' },
-    { label: 'Vacant', value: 'VACANT' },
+    { label: 'Open', value: 'OPEN' },
+    { label: 'Closed', value: 'CLOSED' },
     { label: 'Under Renovation', value: 'UNDER_RENOVATION' },
-    { label: 'Maintenance', value: 'MAINTENANCE' }
+    { label: 'Vacant', value: 'VACANT' }
   ];
 
   constructor(

@@ -30,32 +30,6 @@ import { AvatarComponent } from '../../shared/components/avatar/avatar.component
             <i class="pi pi-home"></i>
             <span *ngIf="!(collapsed$ | async)">Dashboard</span>
           </a>
-          <a routerLink="/admin/analytics" routerLinkActive="active" class="nav-item disabled">
-            <i class="pi pi-chart-bar"></i>
-            <span *ngIf="!(collapsed$ | async)">Analytics</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title" *ngIf="!(collapsed$ | async)">MANAGEMENT</div>
-          <a routerLink="/admin/malls" routerLinkActive="active" class="nav-item">
-            <i class="pi pi-building"></i>
-            <span *ngIf="!(collapsed$ | async)">Malls</span>
-          </a>
-          <a routerLink="/admin/users" routerLinkActive="active" class="nav-item">
-            <i class="pi pi-users"></i>
-            <span *ngIf="!(collapsed$ | async)">Users</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title" *ngIf="!(collapsed$ | async)">SYSTEM</div>
-          <a routerLink="/admin/settings" routerLinkActive="active" class="nav-item disabled">
-            <i class="pi pi-cog"></i>
-            <span *ngIf="!(collapsed$ | async)">Settings</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
         </div>
       </nav>
 

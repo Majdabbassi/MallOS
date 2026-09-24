@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MallService } from '../../../core/services/mall.service';
 import { StoreService } from '../../../core/services/store.service';
-import { AssistantService } from '../../../core/services/assistant.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { Mall } from '../../../core/models/mall.model';
 import { StatsCardComponent } from '../../../shared/components/stats-card/stats-card.component';
 import { SkeletonCardsComponent } from '../../../shared/components/skeleton-cards/skeleton-cards.component';
 
@@ -33,12 +33,6 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
             label="Occupied Stores"
             icon="pi pi-check-circle"
             [trend]="{ direction: 'up', value: '+2', label: 'this month' }">
-          </app-stats-card>
-          <app-stats-card
-            [value]="totalAssistants"
-            label="Active Assistants"
-            icon="pi pi-users"
-            [trend]="{ direction: 'up', value: '+1', label: 'this month' }">
           </app-stats-card>
           <app-stats-card
             [value]="vacantStores"
@@ -70,20 +64,20 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
           </div>
           <div class="occupancy-details">
             <div class="detail-item">
-              <div class="detail-label">Total Area</div>
-              <div class="detail-value">{{ mall?.totalArea?.toLocaleString() || 0 }} m²</div>
+              <div class="detail-label">Company Name</div>
+              <div class="detail-value">{{ mall?.companyName || '-' }}</div>
             </div>
             <div class="detail-item">
-              <div class="detail-label">Total Floors</div>
-              <div class="detail-value">{{ mall?.floorCount || 0 }}</div>
+              <div class="detail-label">Address</div>
+              <div class="detail-value">{{ mall?.address || '-' }}</div>
             </div>
             <div class="detail-item">
-              <div class="detail-label">Opened Year</div>
-              <div class="detail-value">{{ mall?.openedYear || '-' }}</div>
+              <div class="detail-label">Tax ID</div>
+              <div class="detail-value">{{ mall?.taxId || '-' }}</div>
             </div>
             <div class="detail-item">
-              <div class="detail-label">Status</div>
-              <div class="detail-value">{{ mall?.status || '-' }}</div>
+              <div class="detail-label">Opened</div>
+              <div class="detail-value">{{ (mall?.createdAt | date: 'MMM yyyy') || '-' }}</div>
             </div>
           </div>
         </div>
@@ -103,22 +97,13 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
               <div class="action-subtitle">View and manage all stores</div>
             </div>
           </button>
-          <button class="action-card card-interactive" (click)="goToAssistants()">
+          <button class="action-card card-interactive" (click)="goToFloorPlan()">
             <div class="action-icon">
-              <i class="pi pi-users"></i>
+              <i class="ph ph-map-trifold"></i>
             </div>
             <div class="action-content">
-              <div class="action-title">Manage Assistants</div>
-              <div class="action-subtitle">Configure access permissions</div>
-            </div>
-          </button>
-          <button class="action-card card-interactive" (click)="goToOverview()">
-            <div class="action-icon">
-              <i class="ph ph-cube"></i>
-            </div>
-            <div class="action-content">
-              <div class="action-title">3D Mall View</div>
-              <div class="action-subtitle">Visualize mall layout</div>
+              <div class="action-title">Floor Map</div>
+              <div class="action-subtitle">Visualize and edit the mall layout</div>
             </div>
           </button>
           <button class="action-card card-interactive" (click)="goToProfile()">
@@ -378,13 +363,11 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
 })
 export class ManagerDashboardComponent implements OnInit {
   loading = true;
-  mall: any;
+  mall: Mall | null = null;
   stores: any[] = [];
-  assistants: any[] = [];
   totalStores = 0;
   occupiedStores = 0;
   vacantStores = 0;
-  totalAssistants = 0;
   managerName = 'Manager';
   activities = [
     { icon: 'pi pi-shop', text: 'Store "Tech Arena" added', time: '2 hours ago', color: '#4F8EF7' },
@@ -417,7 +400,6 @@ export class ManagerDashboardComponent implements OnInit {
   constructor(
     private mallService: MallService,
     private storeService: StoreService,
-    private assistantService: AssistantService,
     private auth: AuthService,
     private router: Router
   ) {}
@@ -430,11 +412,10 @@ export class ManagerDashboardComponent implements OnInit {
   loadData(): void {
     const user = this.auth.user;
     if (user?.mallId) {
-      this.mallService.getById(user.mallId).subscribe((mall: any) => {
-        this.mall = mall;
+      this.mallService.getById(user.mallId).subscribe(mall => {
+        this.mall = mall ?? null;
         if (mall) {
-          this.loadStores(mall.id);
-          this.loadAssistants(mall.id);
+          this.loadStores(String(mall.id));
         }
       });
     }
@@ -444,19 +425,12 @@ export class ManagerDashboardComponent implements OnInit {
     this.storeService.getByMallId(mallId).subscribe((stores: any[]) => {
       this.stores = stores;
       this.totalStores = stores.length;
-      this.occupiedStores = stores.filter((s: any) => s.status === 'ACTIVE').length;
+      this.occupiedStores = stores.filter((s: any) => s.status === 'OPEN').length;
       this.vacantStores = stores.filter((s: any) => s.status === 'VACANT').length;
-      
+
       setTimeout(() => {
         this.loading = false;
       }, 600);
-    });
-  }
-
-  loadAssistants(mallId: string): void {
-    this.assistantService.getByMallId(mallId).subscribe((assistants: any[]) => {
-      this.assistants = assistants;
-      this.totalAssistants = assistants.length;
     });
   }
 
@@ -464,12 +438,8 @@ export class ManagerDashboardComponent implements OnInit {
     this.router.navigate(['/mall/stores']);
   }
 
-  goToAssistants(): void {
-    this.router.navigate(['/mall/assistants']);
-  }
-
-  goToOverview(): void {
-    this.router.navigate(['/mall/overview']);
+  goToFloorPlan(): void {
+    this.router.navigate(['/mall/floor-plan']);
   }
 
   goToProfile(): void {

@@ -1,0 +1,54 @@
+services:
+  db:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./MallOS_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:mysql://db:3306/${DB_NAME}
+      DB_USERNAME: root
+      DB_PASSWORD: ${DB_PASSWORD}
+      JPA_DDL_AUTO: update
+      SWAGGER_USERNAME: ${SWAGGER_USERNAME}
+      SWAGGER_PASSWORD: ${SWAGGER_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      DEMO_ENABLED: ${DEMO_ENABLED:-true}
+      DEMO_MANAGER_USERNAME: ${DEMO_MANAGER_USERNAME:-manager}
+      DEMO_MANAGER_EMAIL: ${DEMO_MANAGER_EMAIL:-manager@mallos.local}
+      DEMO_MANAGER_PASSWORD: ${DEMO_MANAGER_PASSWORD:-Manager@123}
+      UPLOAD_DIR: /app/uploads
+      MAX_FILE_SIZE: 20MB
+      MAX_REQUEST_SIZE: 25MB
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "${BACKEND_PORT}:8080"
+
+  frontend:
+    build: ./MallOS_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT}:80"
+
+volumes:
+  db-data:
+  uploads:

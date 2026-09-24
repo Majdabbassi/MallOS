@@ -1,5 +1,5 @@
-// Include both frontend historical `MALL_MANAGER` and backend `MALL_USER` for compatibility
-export type UserRole = 'SUPER_ADMIN' | 'MALL_MANAGER' | 'MALL_USER';
+// Backend roles: users self-register as MALL_USER; SUPER_ADMIN is seeded server-side.
+export type UserRole = 'SUPER_ADMIN' | 'MALL_USER';
 
 export interface User {
   id: string;

@@ -105,7 +105,6 @@ export class FloorNewComponent implements OnInit {
   level: number = 0;
   selectedFile: File | null = null;
   loading = false;
-  userId!: number;
   mallId!: number;
 
   constructor(
@@ -116,7 +115,6 @@ export class FloorNewComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    this.userId = Number((this.auth.user as any)?.id ?? 0);
     this.mallId = Number(
       this.route.snapshot.queryParamMap.get('mallId') ??
       (this.auth.user as any)?.mallId ?? 0
@@ -133,7 +131,7 @@ export class FloorNewComponent implements OnInit {
   onSubmit(): void {
     if (!this.selectedFile) return;
     this.loading = true;
-    this.floorplanSvc.createFloor(this.userId, this.mallId, this.name, this.level, this.selectedFile).subscribe({
+    this.floorplanSvc.createFloor(this.mallId, this.name, this.level, this.selectedFile).subscribe({
       next: (f) => {
         this.loading = false;
         this.router.navigate(['/mall/floor-plan/edit', f.id], { queryParams: { mallId: this.mallId } });

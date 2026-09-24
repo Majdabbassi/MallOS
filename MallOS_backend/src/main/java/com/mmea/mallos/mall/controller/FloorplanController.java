@@ -1,5 +1,6 @@
 package com.mmea.mallos.mall.controller;
 
+import com.mmea.mallos.config.security.CurrentUserService;
 import com.mmea.mallos.mall.dto.*;
 import com.mmea.mallos.mall.service.FloorplanService;
 import jakarta.validation.Valid;
@@ -18,55 +19,85 @@ import java.util.List;
 public class FloorplanController {
 
     private final FloorplanService floorplanService;
+    private final CurrentUserService currentUserService;
 
     // ─── Floor endpoints ─────────────────────────────────────────────────────
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<FloorResponse> createFloor(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @RequestParam("name") String name,
             @RequestParam("level") int level,
             @RequestParam(value = "image", required = false) MultipartFile image) {
 
+        Long userId = currentUserService.getCurrentUserId();
         FloorResponse response = floorplanService.createFloor(userId, mallId, name, level, image);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<List<FloorResponse>> listFloors(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long mallId) {
-
+    public ResponseEntity<List<FloorResponse>> listFloors(@PathVariable Long mallId) {
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(floorplanService.listFloors(userId, mallId));
     }
 
     @GetMapping("/{floorId}")
     public ResponseEntity<FloorResponse> getFloor(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(floorplanService.getFloor(userId, mallId, floorId));
+    }
+
+    /**
+     * Serves the uploaded floor-plan image. Authenticated and tenant-scoped:
+     * the caller must be an active member of the mall. The frontend fetches it
+     * with an Authorization header and renders it as a blob.
+     */
+    @GetMapping(value = "/{floorId}/image", produces = MediaType.ALL_VALUE)
+    public ResponseEntity<byte[]> getFloorImage(
+            @PathVariable Long mallId,
+            @PathVariable Long floorId) {
+
+        Long userId = currentUserService.getCurrentUserId();
+        FloorImage image = floorplanService.getFloorImage(userId, mallId, floorId);
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(image.contentType()))
+                .body(image.data());
     }
 
     @PutMapping("/{floorId}")
     public ResponseEntity<FloorResponse> updateFloor(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId,
             @Valid @RequestBody UpdateFloorRequest req) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(floorplanService.updateFloor(userId, mallId, floorId, req));
+    }
+
+    /**
+     * Attaches or replaces the source image of an existing floor. Used by the
+     * trace editor to upload a plan without creating a duplicate floor.
+     */
+    @PutMapping(value = "/{floorId}/image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<FloorResponse> attachFloorImage(
+            @PathVariable Long mallId,
+            @PathVariable Long floorId,
+            @RequestParam("image") MultipartFile image) {
+
+        Long userId = currentUserService.getCurrentUserId();
+        return ResponseEntity.ok(floorplanService.attachFloorImage(userId, mallId, floorId, image));
     }
 
     @PutMapping("/{floorId}/status")
     public ResponseEntity<FloorResponse> updateFloorStatus(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId,
             @Valid @RequestBody UpdateFloorStatusRequest req) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(
                 floorplanService.updateFloorStatus(userId, mallId, floorId, req.getStatus()));
     }
@@ -75,10 +106,10 @@ public class FloorplanController {
 
     @GetMapping("/{floorId}/geometry")
     public ResponseEntity<GeometryResponse> getGeometry(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(floorplanService.getGeometry(userId, mallId, floorId));
     }
 
@@ -86,34 +117,34 @@ public class FloorplanController {
 
     @PostMapping("/{floorId}/polygons")
     public ResponseEntity<PolygonResponse> createPolygon(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId,
             @Valid @RequestBody CreatePolygonRequest req) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return new ResponseEntity<>(
                 floorplanService.createPolygon(userId, mallId, floorId, req), HttpStatus.CREATED);
     }
 
     @PutMapping("/{floorId}/polygons/{polygonId}")
     public ResponseEntity<PolygonResponse> updatePolygon(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId,
             @PathVariable Long polygonId,
             @RequestBody UpdatePolygonRequest req) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(
                 floorplanService.updatePolygon(userId, mallId, floorId, polygonId, req));
     }
 
     @DeleteMapping("/{floorId}/polygons/{polygonId}")
     public ResponseEntity<Void> deletePolygon(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId,
             @PathVariable Long polygonId) {
 
+        Long userId = currentUserService.getCurrentUserId();
         floorplanService.deletePolygon(userId, mallId, floorId, polygonId);
         return ResponseEntity.noContent().build();
     }
@@ -122,23 +153,23 @@ public class FloorplanController {
 
     @PutMapping("/{floorId}/polygons/{polygonId}/store")
     public ResponseEntity<PolygonResponse> linkStore(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId,
             @PathVariable Long polygonId,
             @Valid @RequestBody LinkStoreRequest req) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(
                 floorplanService.linkStore(userId, mallId, floorId, polygonId, req.getStoreId()));
     }
 
     @DeleteMapping("/{floorId}/polygons/{polygonId}/store")
     public ResponseEntity<PolygonResponse> unlinkStore(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long floorId,
             @PathVariable Long polygonId) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(
                 floorplanService.unlinkStore(userId, mallId, floorId, polygonId));
     }

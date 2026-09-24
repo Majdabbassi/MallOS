@@ -261,10 +261,10 @@ export class StoreListComponent implements OnInit {
   ];
   statusOptions = [
     { label: 'All Statuses', value: null },
-    { label: 'Active', value: 'ACTIVE' },
-    { label: 'Vacant', value: 'VACANT' },
+    { label: 'Open', value: 'OPEN' },
+    { label: 'Closed', value: 'CLOSED' },
     { label: 'Under Renovation', value: 'UNDER_RENOVATION' },
-    { label: 'Maintenance', value: 'MAINTENANCE' }
+    { label: 'Vacant', value: 'VACANT' }
   ];
 
   constructor(
@@ -324,8 +324,8 @@ export class StoreListComponent implements OnInit {
           this.uiService.showSuccess('Store deleted successfully');
           this.loadStores();
         },
-        error: (err) => {
-          this.uiService.showError(err.error?.message || 'Failed to delete store');
+        error: () => {
+          // The global error interceptor already surfaced the failure toast.
         }
       });
     }

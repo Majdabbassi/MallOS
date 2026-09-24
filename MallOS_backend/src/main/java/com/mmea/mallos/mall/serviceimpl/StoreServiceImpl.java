@@ -1,11 +1,13 @@
 package com.mmea.mallos.mall.serviceimpl;
 
 import com.mmea.mallos.mall.dto.*;
+import com.mmea.mallos.mall.exception.DuplicateStoreCodeException;
 import com.mmea.mallos.mall.exception.InvalidMallOperationException;
 import com.mmea.mallos.mall.exception.MallNotFoundException;
 import com.mmea.mallos.mall.exception.StoreNotFoundException;
 import com.mmea.mallos.mall.model.Mall;
 import com.mmea.mallos.mall.model.Store;
+import com.mmea.mallos.mall.model.enums.MallPermission;
 import com.mmea.mallos.mall.repository.MallRepository;
 import com.mmea.mallos.mall.repository.SlotRepository;
 import com.mmea.mallos.mall.repository.StoreRepository;
@@ -30,9 +32,12 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public StoreResponse createStore(Long userId, Long mallId, CreateStoreRequest req) {
-        permissionService.assertManager(userId, mallId);
+        // Managers can always write; assistants need MANAGE_STORES in their stored set.
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_STORES);
         Mall mall = mallRepository.findById(mallId)
                 .orElseThrow(MallNotFoundException::new);
+
+        assertUniqueCode(mallId, req.getCode(), null);
 
         Store store = Store.builder()
                 .mall(mall)
@@ -73,9 +78,13 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public StoreResponse updateStore(Long userId, Long mallId, Long storeId, UpdateStoreRequest req) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_STORES);
         Store store = storeRepository.findByIdAndMall_Id(storeId, mallId)
                 .orElseThrow(StoreNotFoundException::new);
+
+        if (req.getCode() != null && !req.getCode().equals(store.getCode())) {
+            assertUniqueCode(mallId, req.getCode(), storeId);
+        }
 
         if (req.getName()          != null) store.setName(req.getName());
         if (req.getCode()          != null) store.setCode(req.getCode());
@@ -98,7 +107,7 @@ public class StoreServiceImpl implements StoreService {
     @Override
     @Transactional
     public void deleteStore(Long userId, Long mallId, Long storeId) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_STORES);
         Store store = storeRepository.findByIdAndMall_Id(storeId, mallId)
                 .orElseThrow(StoreNotFoundException::new);
 
@@ -116,6 +125,17 @@ public class StoreServiceImpl implements StoreService {
         permissionService.assertManager(userId, mallId);
         return storeRepository.findUnlinkedByMallId(mallId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    private void assertUniqueCode(Long mallId, String code, Long excludeStoreId) {
+        if (code != null && !code.isBlank()) {
+            storeRepository.findByMall_IdAndCode(mallId, code)
+                    .filter(existing -> excludeStoreId == null || !existing.getId().equals(excludeStoreId))
+                    .ifPresent(existing -> {
+                        throw new DuplicateStoreCodeException(
+                                "Store code '" + code + "' is already used in this mall");
+                    });
+        }
     }
 
     private StoreResponse toResponse(Store store) {

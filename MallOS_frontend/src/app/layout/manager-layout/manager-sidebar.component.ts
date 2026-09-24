@@ -40,10 +40,6 @@ import { Observable } from 'rxjs';
             <i class="pi pi-home"></i>
             <span *ngIf="!(collapsed$ | async)">Dashboard</span>
           </a>
-          <a routerLink="/mall/overview" routerLinkActive="active" class="nav-item">
-            <i class="ph ph-cube"></i>
-            <span *ngIf="!(collapsed$ | async)">3D Mall View</span>
-          </a>
           <a routerLink="/mall/floor-plan" routerLinkActive="active" class="nav-item">
             <i class="ph ph-map-trifold"></i>
             <span *ngIf="!(collapsed$ | async)">Interactive Map</span>
@@ -55,63 +51,6 @@ import { Observable } from 'rxjs';
           <a routerLink="/mall/stores" routerLinkActive="active" class="nav-item">
             <i class="pi pi-shop"></i>
             <span *ngIf="!(collapsed$ | async)">Stores</span>
-          </a>
-          <a routerLink="/mall/tenants" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-buildings"></i>
-            <span *ngIf="!(collapsed$ | async)">Tenants</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-          <a routerLink="/mall/employees" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-identification-badge"></i>
-            <span *ngIf="!(collapsed$ | async)">Employees</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-          <a routerLink="/mall/assets" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-package"></i>
-            <span *ngIf="!(collapsed$ | async)">Assets</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-          <a routerLink="/mall/maintenance" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-wrench"></i>
-            <span *ngIf="!(collapsed$ | async)">Maintenance</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-          <a routerLink="/mall/energy" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-lightning"></i>
-            <span *ngIf="!(collapsed$ | async)">Energy</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title" *ngIf="!(collapsed$ | async)">OPERATIONS</div>
-          <a routerLink="/mall/sales" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-chart-line-up"></i>
-            <span *ngIf="!(collapsed$ | async)">Sales</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-          <a routerLink="/mall/visitors" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-users-four"></i>
-            <span *ngIf="!(collapsed$ | async)">Visitors</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-          <a routerLink="/mall/parking" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-car"></i>
-            <span *ngIf="!(collapsed$ | async)">Parking</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-          <a routerLink="/mall/security" routerLinkActive="active" class="nav-item disabled">
-            <i class="ph ph-shield-check"></i>
-            <span *ngIf="!(collapsed$ | async)">Security</span>
-            <span class="soon-badge" *ngIf="!(collapsed$ | async)">SOON</span>
-          </a>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title" *ngIf="!(collapsed$ | async)">ACCESS</div>
-          <a routerLink="/mall/assistants" routerLinkActive="active" class="nav-item">
-            <i class="pi pi-users"></i>
-            <span *ngIf="!(collapsed$ | async)">Assistants</span>
           </a>
         </div>
 

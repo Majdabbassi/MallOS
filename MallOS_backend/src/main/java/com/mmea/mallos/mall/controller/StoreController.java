@@ -1,5 +1,6 @@
 package com.mmea.mallos.mall.controller;
 
+import com.mmea.mallos.config.security.CurrentUserService;
 import com.mmea.mallos.mall.dto.*;
 import com.mmea.mallos.mall.service.StoreService;
 import jakarta.validation.Valid;
@@ -16,21 +17,20 @@ import java.util.List;
 public class StoreController {
 
     private final StoreService storeService;
+    private final CurrentUserService currentUserService;
 
     @PostMapping
     public ResponseEntity<StoreResponse> createStore(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @Valid @RequestBody CreateStoreRequest req) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return new ResponseEntity<>(storeService.createStore(userId, mallId, req), HttpStatus.CREATED);
     }
 
     @GetMapping
-    public ResponseEntity<List<StoreResponse>> listStores(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long mallId) {
-
+    public ResponseEntity<List<StoreResponse>> listStores(@PathVariable Long mallId) {
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(storeService.listStores(userId, mallId));
     }
 
@@ -40,38 +40,36 @@ public class StoreController {
      * Must be declared before /{storeId} to avoid path collision.
      */
     @GetMapping("/unlinked")
-    public ResponseEntity<List<StoreResponse>> listUnlinkedStores(
-            @RequestHeader("X-User-Id") Long userId,
-            @PathVariable Long mallId) {
-
+    public ResponseEntity<List<StoreResponse>> listUnlinkedStores(@PathVariable Long mallId) {
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(storeService.listUnlinkedStores(userId, mallId));
     }
 
     @GetMapping("/{storeId}")
     public ResponseEntity<StoreResponse> getStore(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long storeId) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(storeService.getStore(userId, mallId, storeId));
     }
 
     @PutMapping("/{storeId}")
     public ResponseEntity<StoreResponse> updateStore(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long storeId,
             @RequestBody UpdateStoreRequest req) {
 
+        Long userId = currentUserService.getCurrentUserId();
         return ResponseEntity.ok(storeService.updateStore(userId, mallId, storeId, req));
     }
 
     @DeleteMapping("/{storeId}")
     public ResponseEntity<Void> deleteStore(
-            @RequestHeader("X-User-Id") Long userId,
             @PathVariable Long mallId,
             @PathVariable Long storeId) {
 
+        Long userId = currentUserService.getCurrentUserId();
         storeService.deleteStore(userId, mallId, storeId);
         return ResponseEntity.noContent().build();
     }

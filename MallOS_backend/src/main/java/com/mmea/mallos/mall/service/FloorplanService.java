@@ -13,6 +13,7 @@ public interface FloorplanService {
     FloorResponse    getFloor(Long userId, Long mallId, Long floorId);
     FloorResponse    updateFloor(Long userId, Long mallId, Long floorId, UpdateFloorRequest req);
     FloorResponse    updateFloorStatus(Long userId, Long mallId, Long floorId, FloorStatus status);
+    FloorResponse    attachFloorImage(Long userId, Long mallId, Long floorId, MultipartFile image);
 
     PolygonResponse  createPolygon(Long userId, Long mallId, Long floorId, CreatePolygonRequest req);
     PolygonResponse  updatePolygon(Long userId, Long mallId, Long floorId, Long polygonId, UpdatePolygonRequest req);
@@ -21,4 +22,6 @@ public interface FloorplanService {
 
     PolygonResponse  linkStore(Long userId, Long mallId, Long floorId, Long polygonId, Long storeId);
     PolygonResponse  unlinkStore(Long userId, Long mallId, Long floorId, Long polygonId);
+
+    FloorImage       getFloorImage(Long userId, Long mallId, Long floorId);
 }

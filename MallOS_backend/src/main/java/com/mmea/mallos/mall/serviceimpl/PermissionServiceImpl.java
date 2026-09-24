@@ -6,6 +6,9 @@ import com.mmea.mallos.mall.model.enums.MallPermission;
 import com.mmea.mallos.mall.model.enums.MallMemberRole;
 import com.mmea.mallos.mall.repository.MallMemberRepository;
 import com.mmea.mallos.mall.service.PermissionService;
+import com.mmea.mallos.user.model.User;
+import com.mmea.mallos.user.model.enums.Role;
+import com.mmea.mallos.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -15,9 +18,15 @@ import org.springframework.stereotype.Service;
 public class PermissionServiceImpl implements PermissionService {
 
     private final MallMemberRepository mallMemberRepository;
+    private final UserRepository userRepository;
 
     @Override
     public void assertAccess(Long userId, Long mallId, MallPermission permission) {
+        // Platform administrators are not mall members, but they own the
+        // platform: they have full read/write access to every mall.
+        User user = userRepository.findById(userId).orElseThrow(MallAccessDeniedException::new);
+        if (user.getRole() == Role.SUPER_ADMIN) return;
+
         MallMember member = mallMemberRepository.findActiveByUserAndMall(userId, mallId);
         if (member == null) throw new MallAccessDeniedException();
 
@@ -36,6 +45,9 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public void assertManager(Long userId, Long mallId) {
+        User user = userRepository.findById(userId).orElseThrow(MallAccessDeniedException::new);
+        if (user.getRole() == Role.SUPER_ADMIN) return;
+
         MallMember member = mallMemberRepository.findActiveByUserAndMall(userId, mallId);
         if (member == null || member.getRole() != MallMemberRole.MANAGER)
             throw new MallAccessDeniedException();

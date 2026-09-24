@@ -10,6 +10,7 @@ import com.mmea.mallos.mall.exception.StoreNotFoundException;
 import com.mmea.mallos.mall.exception.InvalidMallOperationException;
 import com.mmea.mallos.mall.model.*;
 import com.mmea.mallos.mall.model.enums.FloorStatus;
+import com.mmea.mallos.mall.model.enums.MallPermission;
 import com.mmea.mallos.mall.repository.*;
 import com.mmea.mallos.mall.service.FloorplanService;
 import com.mmea.mallos.mall.service.PermissionService;
@@ -48,20 +49,20 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public FloorResponse createFloor(Long userId, Long mallId, String name, int level, MultipartFile image) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         Mall mall = mallRepository.findById(mallId)
                 .orElseThrow(() -> new InvalidMallOperationException("Mall not found"));
 
-        String imageUrl = null;
+        String imageFilename = null;
         if (image != null && !image.isEmpty()) {
-            imageUrl = saveImage(image);
+            imageFilename = saveImage(image);
         }
 
         Floor floor = Floor.builder()
                 .mall(mall)
                 .name(name)
                 .level(level)
-                .sourceImageUrl(imageUrl)
+                .sourceImageUrl(imageFilename)
                 .status(FloorStatus.UPLOADED)
                 .build();
 
@@ -84,7 +85,7 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public FloorResponse updateFloor(Long userId, Long mallId, Long floorId, UpdateFloorRequest req) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         Floor floor = findFloor(mallId, floorId);
         if (req.getName()  != null) floor.setName(req.getName());
         if (req.getLevel() != null) floor.setLevel(req.getLevel());
@@ -94,10 +95,28 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public FloorResponse updateFloorStatus(Long userId, Long mallId, Long floorId, FloorStatus status) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         Floor floor = findFloor(mallId, floorId);
         floor.setStatus(status);
         return toFloorResponse(floorRepository.save(floor));
+    }
+
+    @Override
+    @Transactional
+    public FloorResponse attachFloorImage(Long userId, Long mallId, Long floorId, MultipartFile image) {
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
+        Floor floor = findFloor(mallId, floorId);
+
+        if (image == null || image.isEmpty()) {
+            throw new InvalidMallOperationException("No image provided");
+        }
+
+        String previous = floor.getSourceImageUrl();
+        floor.setSourceImageUrl(saveImage(image));
+        Floor saved = floorRepository.save(floor);
+
+        deleteStoredImage(previous);
+        return toFloorResponse(saved);
     }
 
     // ─── Polygon operations ──────────────────────────────────────────────────
@@ -105,7 +124,7 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public PolygonResponse createPolygon(Long userId, Long mallId, Long floorId, CreatePolygonRequest req) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         Floor floor = findFloor(mallId, floorId);
 
         // Transition to TRACING on first polygon save if still UPLOADED
@@ -127,7 +146,7 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public PolygonResponse updatePolygon(Long userId, Long mallId, Long floorId, Long polygonId, UpdatePolygonRequest req) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         FloorPolygon polygon = findPolygon(floorId, polygonId);
 
         if (req.getPoints()      != null) polygon.setPoints(serializePoints(req.getPoints()));
@@ -142,7 +161,7 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public void deletePolygon(Long userId, Long mallId, Long floorId, Long polygonId) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         FloorPolygon polygon = findPolygon(floorId, polygonId);
         slotRepository.findByPolygon_Id(polygonId).ifPresent(slotRepository::delete);
         polygonRepository.delete(polygon);
@@ -175,7 +194,7 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public PolygonResponse linkStore(Long userId, Long mallId, Long floorId, Long polygonId, Long storeId) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         Floor floor     = findFloor(mallId, floorId);
         FloorPolygon polygon = findPolygon(floorId, polygonId);
 
@@ -201,7 +220,7 @@ public class FloorplanServiceImpl implements FloorplanService {
     @Override
     @Transactional
     public PolygonResponse unlinkStore(Long userId, Long mallId, Long floorId, Long polygonId) {
-        permissionService.assertManager(userId, mallId);
+        permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         FloorPolygon polygon = findPolygon(floorId, polygonId);
 
         slotRepository.findByPolygon_Id(polygonId).ifPresent(slot -> {
@@ -224,15 +243,125 @@ public class FloorplanServiceImpl implements FloorplanService {
                 .orElseThrow(PolygonNotFoundException::new);
     }
 
+    private static final List<String> ALLOWED_EXTENSIONS = List.of("png", "jpg", "jpeg", "webp", "gif");
+
     private String saveImage(MultipartFile file) {
+        String extension = detectImageExtension(file);
         try {
             Path dir = Paths.get(uploadDir);
             Files.createDirectories(dir);
-            String filename = UUID.randomUUID() + "_" + file.getOriginalFilename();
-            Files.copy(file.getInputStream(), dir.resolve(filename));
-            return "/uploads/" + filename;
+            String filename = UUID.randomUUID() + "." + extension;
+            Files.write(dir.resolve(filename), file.getBytes());
+            return filename;
         } catch (IOException e) {
             throw new InvalidMallOperationException("Failed to save uploaded image: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Best-effort removal of a previously stored image. Accepts both the raw
+     * filename and the legacy "/uploads/<file>" reference. Never throws: a
+     * missing/orphaned file must not fail the request that replaced it.
+     */
+    private void deleteStoredImage(String reference) {
+        if (reference == null || reference.isBlank()) return;
+        String filename = reference.startsWith("/uploads/")
+                ? reference.substring("/uploads/".length())
+                : reference;
+        try {
+            Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Path file = Paths.get(uploadDir).resolve(filename).toAbsolutePath().normalize();
+            if (file.startsWith(base)) {
+                Files.deleteIfExists(file);
+            }
+        } catch (IOException ignored) {
+            // Orphaned file is acceptable; do not fail the request.
+        }
+    }
+
+    /**
+     * Validates the uploaded file: it must be an image content type, its
+     * magic bytes must match a supported raster format, and the declared file
+     * extension must agree with the detected format.
+     */
+    private String detectImageExtension(MultipartFile file) {
+        byte[] bytes;
+        try {
+            bytes = file.getBytes();
+        } catch (IOException e) {
+            throw new InvalidMallOperationException("Failed to read uploaded image");
+        }
+        if (bytes.length == 0) {
+            throw new InvalidMallOperationException("Uploaded file is empty");
+        }
+
+        String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
+        if (!contentType.startsWith("image/")) {
+            throw new InvalidMallOperationException("Uploaded file is not an image (content type '" + contentType + "')");
+        }
+
+        String detected = detectFormatByContent(bytes);
+        String declared = ALLOWED_EXTENSIONS.stream()
+                .filter(ext -> file.getOriginalFilename() != null
+                        && file.getOriginalFilename().toLowerCase().endsWith("." + ext))
+                .findFirst()
+                .orElse(null);
+
+        if (declared == null) {
+            throw new InvalidMallOperationException(
+                    "Image file must have an .png, .jpg, .jpeg, .webp or .gif extension");
+        }
+        if (!detected.equals(declared)
+                && !(detected.equals("jpg") && declared.equals("jpeg"))) {
+            throw new InvalidMallOperationException(
+                    "Image content (" + detected + ") does not match its '" + declared + "' extension");
+        }
+        return detected;
+    }
+
+    private String detectFormatByContent(byte[] bytes) {
+        if (bytes.length >= 8 && (bytes[0] & 0xFF) == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G') {
+            return "png";
+        }
+        if (bytes.length >= 3 && (bytes[0] & 0xFF) == 0xFF && (bytes[1] & 0xFF) == 0xD8 && (bytes[2] & 0xFF) == 0xFF) {
+            return "jpg";
+        }
+        if (bytes.length >= 6
+                && bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F'
+                && bytes[3] == '8' && (bytes[4] == '7' || bytes[4] == '9') && bytes[5] == 'a') {
+            return "gif";
+        }
+        if (bytes.length >= 12
+                && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') {
+            return "webp";
+        }
+        throw new InvalidMallOperationException("Unsupported image format — only PNG, JPEG, GIF and WEBP are allowed");
+    }
+
+    @Override
+    public FloorImage getFloorImage(Long userId, Long mallId, Long floorId) {
+        permissionService.assertAccess(userId, mallId, null);
+        Floor floor = findFloor(mallId, floorId);
+
+        String ref = floor.getSourceImageUrl();
+        if (ref == null || ref.isBlank()) {
+            throw new FloorNotFoundException();
+        }
+        // Backwards compatibility: older rows stored a public "/uploads/<file>" URL.
+        String filename = ref.startsWith("/uploads/") ? ref.substring("/uploads/".length()) : ref;
+
+        Path base = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path file = Paths.get(uploadDir).resolve(filename).toAbsolutePath().normalize();
+        if (!file.startsWith(base) || !Files.isRegularFile(file)) {
+            throw new FloorNotFoundException();
+        }
+        try {
+            byte[] data = Files.readAllBytes(file);
+            String contentType = Files.probeContentType(file);
+            return new FloorImage(data, contentType != null ? contentType : "image/png");
+        } catch (IOException e) {
+            throw new InvalidMallOperationException("Failed to read floor-plan image");
         }
     }
 
@@ -258,7 +387,9 @@ public class FloorplanServiceImpl implements FloorplanService {
                 .mallId(floor.getMall().getId())
                 .name(floor.getName())
                 .level(floor.getLevel())
-                .sourceImageUrl(floor.getSourceImageUrl())
+                .sourceImageUrl(floor.getSourceImageUrl() != null
+                        ? "/api/malls/" + floor.getMall().getId() + "/floors/" + floor.getId() + "/image"
+                        : null)
                 .width(floor.getWidth())
                 .height(floor.getHeight())
                 .status(floor.getStatus())

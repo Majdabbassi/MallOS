@@ -420,7 +420,6 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
   private tooltip!: Konva.Label;
 
   private mallId!: number;
-  private userId!: number;
 
   constructor(
     private auth: AuthService,
@@ -431,8 +430,7 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
   ) {}
 
   ngOnInit(): void {
-    this.userId    = Number((this.auth.user as any)?.id ?? 0);
-    this.isManager = (this.auth.user as any)?.role === 'MALL_MANAGER' || (this.auth.user as any)?.role === 'MALL_USER';
+    this.isManager = (this.auth.user as any)?.role === 'MALL_USER';
     this.mallId    = Number(
       this.route.snapshot.queryParamMap.get('mallId') ??
       (this.auth.user as any)?.mallId ?? 0
@@ -451,7 +449,7 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
 
   private loadFloors(): void {
     this.loading = true;
-    this.floorplanSvc.listFloors(this.userId, this.mallId).subscribe({
+    this.floorplanSvc.listFloors(this.mallId).subscribe({
       next: floors => {
         this.floors = floors;
         const completed = floors.find(f => f.status === 'COMPLETED') ?? floors[0];
@@ -476,7 +474,7 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
       return;
     }
 
-    this.floorplanSvc.getGeometry(this.userId, this.mallId, floor.id).subscribe({
+    this.floorplanSvc.getGeometry(this.mallId, floor.id).subscribe({
       next: geo => {
         this.polygons = geo.polygons;
         this.loading  = false;
@@ -528,18 +526,25 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
       });
     });
 
-    // Background image
+    // Background image (fetched with the auth interceptor so it loads as the principal)
     if (geo.floor.sourceImageUrl) {
-      const img = new Image();
-      img.onload = () => {
-        const kImg = new Konva.Image({
-          image: img, x: 0, y: 0,
-          width: this.stage.width(), height: this.stage.height(),
-        });
-        this.imageLayer.add(kImg);
-        this.imageLayer.batchDraw();
-      };
-      img.src = `http://localhost:8080${geo.floor.sourceImageUrl}`;
+      this.floorplanSvc.getFloorImage(this.mallId, geo.floor.id).subscribe({
+        next: blob => {
+          const url = URL.createObjectURL(blob);
+          const img = new Image();
+          img.onload = () => {
+            const kImg = new Konva.Image({
+              image: img, x: 0, y: 0,
+              width: this.stage.width(), height: this.stage.height(),
+            });
+            this.imageLayer.add(kImg);
+            this.imageLayer.batchDraw();
+          };
+          img.onerror = () => URL.revokeObjectURL(url);
+          img.src = url;
+        },
+        error: () => { /* floor created without an image */ }
+      });
     }
 
     // Build tooltip

@@ -324,7 +324,7 @@ export class LoginComponent {
           this.uiService.showSuccess('Welcome back!');
           if (user?.role === 'SUPER_ADMIN') {
             this.router.navigate(['/admin/dashboard']);
-          } else if (user?.role === 'MALL_MANAGER' || user?.role === 'MALL_USER') {
+          } else if (user?.role === 'MALL_USER') {
             this.router.navigate(['/mall/dashboard']);
           } else {
             this.router.navigate(['/']);

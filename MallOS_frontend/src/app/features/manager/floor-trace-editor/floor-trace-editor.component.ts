@@ -360,7 +360,6 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
 
   private mallId!: number;
   private floorId!: number;
-  private userId!: number;
 
   constructor(
     private route: ActivatedRoute,
@@ -372,14 +371,16 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
   ) {}
 
   ngOnInit(): void {
-    this.userId = Number((this.auth.user as any)?.id ?? 0);
     this.floorId = Number(this.route.snapshot.paramMap.get('floorId'));
     this.mallId  = Number(this.route.snapshot.queryParamMap.get('mallId') ?? 0);
 
-    this.floorplanSvc.getFloor(this.userId, this.mallId, this.floorId).subscribe(f => {
+    this.floorplanSvc.getFloor(this.mallId, this.floorId).subscribe(f => {
       this.floor = f;
       this.cdr.detectChanges();
-      if (f.sourceImageUrl) this.loadExistingPolygons();
+      if (f.sourceImageUrl) {
+        this.loadBackgroundImage();
+        this.loadExistingPolygons();
+      }
     });
     this.loadUnlinkedStores();
   }
@@ -418,24 +419,31 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
     });
 
     if (this.floor?.sourceImageUrl) {
-      this.loadBackgroundImage(this.floor.sourceImageUrl);
+      this.loadBackgroundImage();
     }
   }
 
-  private loadBackgroundImage(url: string): void {
-    const img = new Image();
-    img.onload = () => {
-      const kImg = new Konva.Image({
-        image: img,
-        x: 0, y: 0,
-        width:  this.stage.width(),
-        height: this.stage.height(),
-      });
-      this.imageLayer.destroyChildren();
-      this.imageLayer.add(kImg);
-      this.imageLayer.draw();
-    };
-    img.src = `http://localhost:8080${url}`;
+  private loadBackgroundImage(): void {
+    this.floorplanSvc.getFloorImage(this.mallId, this.floorId).subscribe({
+      next: blob => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          const kImg = new Konva.Image({
+            image: img,
+            x: 0, y: 0,
+            width:  this.stage.width(),
+            height: this.stage.height(),
+          });
+          this.imageLayer.destroyChildren();
+          this.imageLayer.add(kImg);
+          this.imageLayer.draw();
+        };
+        img.onerror = () => URL.revokeObjectURL(url);
+        img.src = url;
+      },
+      error: () => { /* floor created without an image */ }
+    });
   }
 
   // ─── Drawing ───────────────────────────────────────────────────────────────
@@ -491,7 +499,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
     this.clearDrawingState();
 
     const req = { points: normalized, label: '', polygonType: 'STORE' as PolygonType };
-    this.floorplanSvc.createPolygon(this.userId, this.mallId, this.floorId, req).subscribe(resp => {
+    this.floorplanSvc.createPolygon(this.mallId, this.floorId, req).subscribe(resp => {
       const dp = this.toDrawingPolygon(resp);
       this.polygons.push(dp);
       this.renderPolygon(dp);
@@ -513,7 +521,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
   // ─── Render existing polygons ──────────────────────────────────────────────
 
   private loadExistingPolygons(): void {
-    this.floorplanSvc.getGeometry(this.userId, this.mallId, this.floorId).subscribe(geo => {
+    this.floorplanSvc.getGeometry(this.mallId, this.floorId).subscribe(geo => {
       this.polygons = geo.polygons.map(p => this.toDrawingPolygon(p));
       this.polygons.forEach(p => this.renderPolygon(p));
       this.drawLayer.batchDraw();
@@ -564,7 +572,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
 
   savePolygon(dp: DrawingPolygon): void {
     if (!dp.id) return;
-    this.floorplanSvc.updatePolygon(this.userId, this.mallId, this.floorId, dp.id, {
+    this.floorplanSvc.updatePolygon(this.mallId, this.floorId, dp.id, {
       label: dp.label, polygonType: dp.polygonType,
     }).subscribe(resp => {
       Object.assign(dp, this.toDrawingPolygon(resp));
@@ -582,7 +590,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
   deletePolygon(dp: DrawingPolygon, e: Event): void {
     e.stopPropagation();
     if (!dp.id) return;
-    this.floorplanSvc.deletePolygon(this.userId, this.mallId, this.floorId, dp.id).subscribe(() => {
+    this.floorplanSvc.deletePolygon(this.mallId, this.floorId, dp.id).subscribe(() => {
       dp.konvaGroup?.destroy();
       this.drawLayer.batchDraw();
       this.polygons = this.polygons.filter(p => p.id !== dp.id);
@@ -594,7 +602,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
   // ─── Store assignment ──────────────────────────────────────────────────────
 
   loadUnlinkedStores(): void {
-    this.storeApiSvc.listUnlinked(this.userId, this.mallId).subscribe(stores => {
+    this.storeApiSvc.listUnlinked(this.mallId).subscribe(stores => {
       this.unlinkedStores = stores;
       this.cdr.detectChanges();
     });
@@ -603,7 +611,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
   linkStore(dp: DrawingPolygon, event: Event): void {
     const storeId = Number((event.target as HTMLSelectElement).value);
     if (!storeId || !dp.id) return;
-    this.floorplanSvc.linkStore(this.userId, this.mallId, this.floorId, dp.id, storeId).subscribe(resp => {
+    this.floorplanSvc.linkStore(this.mallId, this.floorId, dp.id, storeId).subscribe(resp => {
       dp.storeId   = resp.store?.id;
       dp.storeName = resp.store?.name;
       dp.storeCode = resp.store?.code;
@@ -615,7 +623,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
 
   unlinkStore(dp: DrawingPolygon): void {
     if (!dp.id) return;
-    this.floorplanSvc.unlinkStore(this.userId, this.mallId, this.floorId, dp.id).subscribe(() => {
+    this.floorplanSvc.unlinkStore(this.mallId, this.floorId, dp.id).subscribe(() => {
       const removedId = dp.storeId;
       dp.storeId = dp.storeName = dp.storeCode = undefined;
       this.loadUnlinkedStores();
@@ -633,7 +641,7 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
 
   markComplete(): void {
     this.saving = true;
-    this.floorplanSvc.updateFloorStatus(this.userId, this.mallId, this.floorId, 'COMPLETED').subscribe(f => {
+    this.floorplanSvc.updateFloorStatus(this.mallId, this.floorId, 'COMPLETED').subscribe(f => {
       this.floor = f;
       this.saving = false;
       this.showSaveMessage('Floor marked as COMPLETED');
@@ -660,13 +668,13 @@ export class FloorTraceEditorComponent implements OnInit, OnDestroy, AfterViewIn
   }
 
   private uploadImage(file: File): void {
-    const name = this.floor?.name ?? 'Floor';
-    const level = this.floor?.level ?? 0;
-    this.floorplanSvc.createFloor(this.userId, this.mallId, name, level, file).subscribe(f => {
+    // Attach the image to the floor currently being edited — never create a
+    // new floor from here.
+    this.floorplanSvc.updateFloorImage(this.mallId, this.floorId, file).subscribe(f => {
       this.floor = f;
       this.floorId = f.id;
       this.cdr.detectChanges();
-      this.loadBackgroundImage(f.sourceImageUrl!);
+      this.loadBackgroundImage();
     });
   }
 

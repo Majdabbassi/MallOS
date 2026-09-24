@@ -14,6 +14,8 @@ public interface StoreRepository extends JpaRepository<Store, Long> {
 
     Optional<Store> findByIdAndMall_Id(Long storeId, Long mallId);
 
+    Optional<Store> findByMall_IdAndCode(Long mallId, String code);
+
     /**
      * Returns stores that belong to the given mall AND are not currently
      * referenced by any Slot with a non-null store field.

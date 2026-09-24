@@ -46,6 +46,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.UNAUTHORIZED, "Invalid username or password");
     }
 
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleSpringAccessDenied(org.springframework.security.access.AccessDeniedException ex) {
+        return error(HttpStatus.FORBIDDEN, "Access denied");
+    }
+
     @ExceptionHandler(org.springframework.security.core.userdetails.UsernameNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleUserNotFound(org.springframework.security.core.userdetails.UsernameNotFoundException ex) {
         return error(HttpStatus.UNAUTHORIZED, "Invalid username or password");
@@ -61,6 +66,17 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(DuplicateStoreCodeException.class)
+    public ResponseEntity<Map<String, Object>> handleDuplicateStoreCode(DuplicateStoreCodeException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, Object>> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
+        return error(HttpStatus.CONFLICT, "A record with the same unique key already exists");
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, Object>> handleValidation(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors()
@@ -68,6 +84,13 @@ public class GlobalExceptionHandler {
                 .map(e -> e.getField() + ": " + e.getDefaultMessage())
                 .collect(Collectors.joining("; "));
         return error(HttpStatus.BAD_REQUEST, message);
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<Map<String, Object>> handleUnreadableBody(
+            org.springframework.http.converter.HttpMessageNotReadableException ex) {
+        log.warn("Malformed request body: {}", ex.getMessage());
+        return error(HttpStatus.BAD_REQUEST, "Malformed request body");
     }
 
     @ExceptionHandler(Exception.class)

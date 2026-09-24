@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
-import { Store, StoreCategory, StoreStatus } from '../models/store.model';
+import { Store, CreateStoreRequest } from '../models/store.model';
 import { AuthService } from './auth.service';
+import { environment } from '../../../environments/environment';
 
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = `${environment.apiBaseUrl}/api`;
 
 @Injectable({
   providedIn: 'root'
@@ -14,15 +15,10 @@ export class StoreService {
 
   constructor(private http: HttpClient, private auth: AuthService) {}
 
-  private get headers(): HttpHeaders {
-    const userId = (this.auth.user as any)?.id ?? 0;
-    return new HttpHeaders({ 'X-User-Id': String(userId) });
-  }
-
   getAll(mallId?: string): Observable<Store[]> {
     const mid = mallId || (this.auth.user as any)?.mallId;
     if (!mid) return of([]);
-    return this.http.get<Store[]>(`${API_BASE}/malls/${mid}/stores`, { headers: this.headers }).pipe(
+    return this.http.get<Store[]>(`${API_BASE}/malls/${mid}/stores`).pipe(
       catchError(() => of([]))
     );
   }
@@ -47,14 +43,19 @@ export class StoreService {
       mallId = (this.auth.user as any)?.mallId;
     }
     if (!mallId || !sid) return of(undefined);
-    return this.http.get<Store>(`${API_BASE}/malls/${mallId}/stores/${sid}`, { headers: this.headers }).pipe(
+    return this.http.get<Store>(`${API_BASE}/malls/${mallId}/stores/${sid}`).pipe(
       catchError(() => of(undefined))
     );
   }
 
-  create(mallIdOrPayload: string | Partial<Store>, payloadOptional?: Partial<Store>): Observable<Store | null> {
+  /**
+   * Creates a store. The payload matches the backend CreateStoreRequest DTO —
+   * the id, mallId and createdAt are generated server-side, never client-side.
+   * Errors propagate to the caller (the global error interceptor surfaces a toast).
+   */
+  create(mallIdOrPayload: string | CreateStoreRequest, payloadOptional?: CreateStoreRequest): Observable<Store> {
     let mallId: string | undefined;
-    let payload: Partial<Store> | undefined;
+    let payload: CreateStoreRequest | undefined;
     if (typeof mallIdOrPayload === 'string') {
       mallId = mallIdOrPayload;
       payload = payloadOptional;
@@ -62,13 +63,11 @@ export class StoreService {
       payload = mallIdOrPayload;
       mallId = (this.auth.user as any)?.mallId;
     }
-    if (!mallId || !payload) return of(null);
-    return this.http.post<Store>(`${API_BASE}/malls/${mallId}/stores`, payload, { headers: this.headers }).pipe(
-      catchError(() => of(null))
-    );
+    if (!mallId || !payload) throw new Error('Cannot create a store without a mall id');
+    return this.http.post<Store>(`${API_BASE}/malls/${mallId}/stores`, payload);
   }
 
-  update(mallIdOrStoreId: string, storeIdOrData: string | Partial<Store>, dataOptional?: Partial<Store>): Observable<any> {
+  update(mallIdOrStoreId: string, storeIdOrData: string | Partial<Store>, dataOptional?: Partial<Store>): Observable<Store> {
     let mallId: string | undefined;
     let storeId: string | undefined;
     let data: Partial<Store> | undefined;
@@ -81,13 +80,11 @@ export class StoreService {
       storeId = mallIdOrStoreId;
       data = storeIdOrData as Partial<Store>;
     }
-    if (!mallId || !storeId || !data) return of(null);
-    return this.http.put(`${API_BASE}/malls/${mallId}/stores/${storeId}`, data, { headers: this.headers }).pipe(
-      catchError(() => of(null))
-    );
+    if (!mallId || !storeId || !data) throw new Error('Cannot update a store without a mall and store id');
+    return this.http.put<Store>(`${API_BASE}/malls/${mallId}/stores/${storeId}`, data);
   }
 
-  delete(mallIdOrStoreId: string, storeIdOptional?: string): Observable<any> {
+  delete(mallIdOrStoreId: string, storeIdOptional?: string): Observable<void> {
     let mallId: string | undefined;
     let storeId: string | undefined;
     if (storeIdOptional) {
@@ -97,10 +94,8 @@ export class StoreService {
       mallId = (this.auth.user as any)?.mallId;
       storeId = mallIdOrStoreId;
     }
-    if (!mallId || !storeId) return of(null);
-    return this.http.delete(`${API_BASE}/malls/${mallId}/stores/${storeId}`, { headers: this.headers }).pipe(
-      catchError(() => of(null))
-    );
+    if (!mallId || !storeId) throw new Error('Cannot delete a store without a mall and store id');
+    return this.http.delete<void>(`${API_BASE}/malls/${mallId}/stores/${storeId}`);
   }
 
 }

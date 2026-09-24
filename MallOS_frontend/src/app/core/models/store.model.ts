@@ -30,3 +30,21 @@ export interface Store {
   createdAt: string;
   description?: string;
 }
+
+/** Exact payload the backend CreateStoreRequest DTO expects. */
+export interface CreateStoreRequest {
+  name: string;
+  code: string;
+  category: StoreCategory;
+  floor: number;
+  zone: string;
+  surface: number;
+  status: StoreStatus;
+  ownerName?: string;
+  ownerPhone?: string;
+  ownerEmail?: string;
+  contractStart?: string;
+  contractEnd?: string;
+  monthlyRent?: number;
+  description?: string;
+}
