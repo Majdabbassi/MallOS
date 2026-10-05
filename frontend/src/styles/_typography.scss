@@ -6,10 +6,13 @@
   --font-mono: 'JetBrains Mono', monospace;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+// In a layer that ranks below PrimeNG's (see index.html): an unlayered reset would beat every PrimeNG rule.
+@layer reset {
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
 }
 
 body {

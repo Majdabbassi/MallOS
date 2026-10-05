@@ -22,8 +22,10 @@ public class MallServiceImpl implements MallService {
     private final MallRepository mallRepository;
     private final UserRepository userRepository;
     private final PermissionService permissionService;
+    private final com.mmea.mallos.audit.AuditService audit;
 
     @Override
+    @org.springframework.transaction.annotation.Transactional
     public Mall createMall(Long adminId, CreateMallRequest request) {
         User admin = userRepository.findById(adminId).orElseThrow(() -> new InvalidMallOperationException("Admin not found"));
         if (admin.getRole() != Role.SUPER_ADMIN) throw new InvalidMallOperationException("Only SUPER_ADMIN can create malls");
@@ -36,7 +38,10 @@ public class MallServiceImpl implements MallService {
                 .createdBy(admin)
                 .build();
 
-        return mallRepository.save(mall);
+        Mall saved = mallRepository.save(mall);
+        audit.record(adminId, saved.getId(), "MALL_CREATED", "MALL", saved.getId(), null,
+                "Mall '" + saved.getName() + "' created");
+        return saved;
     }
 
     @Override

@@ -51,6 +51,18 @@ export const routes: Routes = [
         loadComponent: () => import('./features/manager/floor-trace-editor/floor-trace-editor.component').then(m => m.FloorTraceEditorComponent)
       },
       {
+        path: 'finance',
+        loadComponent: () => import('./features/manager/finance/finance.component').then(m => m.FinanceComponent)
+      },
+      {
+        path: 'analytics',
+        loadComponent: () => import('./features/manager/analytics/analytics.component').then(m => m.AnalyticsComponent)
+      },
+      {
+        path: 'activity',
+        loadComponent: () => import('./features/manager/activity/activity.component').then(m => m.ActivityComponent)
+      },
+      {
         path: 'team',
         loadComponent: () => import('./features/manager/team/team.component').then(m => m.TeamComponent)
       },

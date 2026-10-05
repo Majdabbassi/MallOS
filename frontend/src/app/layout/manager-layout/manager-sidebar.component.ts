@@ -52,9 +52,21 @@ import { Observable } from 'rxjs';
             <i class="pi pi-shop"></i>
             <span *ngIf="!(collapsed$ | async)">Stores</span>
           </a>
+          <a routerLink="/mall/finance" routerLinkActive="active" class="nav-item">
+            <i class="pi pi-wallet"></i>
+            <span *ngIf="!(collapsed$ | async)">Rent &amp; invoices</span>
+          </a>
+          <a routerLink="/mall/analytics" routerLinkActive="active" class="nav-item">
+            <i class="pi pi-chart-bar"></i>
+            <span *ngIf="!(collapsed$ | async)">Occupancy</span>
+          </a>
           <a routerLink="/mall/team" routerLinkActive="active" class="nav-item">
             <i class="pi pi-users"></i>
             <span *ngIf="!(collapsed$ | async)">Team</span>
+          </a>
+          <a routerLink="/mall/activity" routerLinkActive="active" class="nav-item">
+            <i class="pi pi-history"></i>
+            <span *ngIf="!(collapsed$ | async)">Activity</span>
           </a>
         </div>
 

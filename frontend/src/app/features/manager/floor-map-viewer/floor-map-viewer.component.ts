@@ -7,6 +7,8 @@ import { RouterModule, Router, ActivatedRoute } from '@angular/router';
 import Konva from 'konva';
 import { AuthService } from '../../../core/services/auth.service';
 import { FloorplanService } from '../../../core/services/floorplan.service';
+import { FinanceService } from '../../../core/services/finance.service';
+import { LeaseState, UnitState } from '../../../core/models/finance.model';
 import {
   FloorResponse, PolygonResponse, GeometryResponse,
   POLYGON_TYPE_COLORS, STORE_STATUS_COLORS, PolygonType, StoreStatus
@@ -112,7 +114,11 @@ import {
 
           <!-- Legend -->
           <div class="legend" *ngIf="selectedFloor?.status === 'COMPLETED'">
-            <div class="legend-item" *ngFor="let l of legend">
+            <button type="button" class="lease-toggle" [class.on]="leaseView" (click)="toggleLeaseView()"
+                    title="Colour the stores by lease: vacant, ending soon, leased">
+              <i class="ph ph-key"></i> {{ leaseView ? 'Showing leases' : 'Show leases' }}
+            </button>
+            <div class="legend-item" *ngFor="let l of legendItems">
               <span class="legend-dot" [style.background]="l.color"></span>
               {{ l.label }}
             </div>
@@ -287,6 +293,9 @@ import {
       border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
       padding: 10px 14px; display: flex; flex-direction: column; gap: 6px; z-index: 10;
     }
+    .lease-toggle { background: rgba(148,163,184,.12); color: #cbd5e1; border: 1px solid rgba(148,163,184,.3); border-radius: 6px;
+                    padding: 4px 10px; font: inherit; font-size: 12px; cursor: pointer; margin-bottom: 4px; }
+    .lease-toggle.on { background: rgba(79,142,247,.2); color: #93c5fd; border-color: rgba(79,142,247,.5); }
     .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #94a3b8; }
     .legend-dot  { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 
@@ -414,6 +423,27 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
     { label: 'Boundary',    color: POLYGON_TYPE_COLORS.BOUNDARY.stroke },
   ];
 
+  /** Colour of a store polygon in the lease view, by the state of its lease. */
+  private static readonly LEASE_FILL: Record<LeaseState, string> = {
+    VACANT: 'rgba(239,68,68,0.45)', EXPIRED: 'rgba(190,24,93,0.5)', EXPIRING: 'rgba(245,158,11,0.45)', LEASED: 'rgba(16,185,129,0.35)'
+  };
+  private static readonly LEASE_LABEL: Record<LeaseState, string> = {
+    VACANT: 'Vacant', EXPIRED: 'Lease ended, still open', EXPIRING: 'Lease ends within 90 days', LEASED: 'Leased'
+  };
+
+  leaseView = false;
+  private units = new Map<number, UnitState>();
+
+  get legendItems(): { label: string; color: string }[] {
+    if (!this.leaseView) {
+      return this.legend;
+    }
+    return (['LEASED', 'EXPIRING', 'EXPIRED', 'VACANT'] as LeaseState[]).map(state => ({
+      label: FloorMapViewerComponent.LEASE_LABEL[state],
+      color: FloorMapViewerComponent.LEASE_FILL[state].replace(/[\d.]+\)$/, '1)')
+    }));
+  }
+
   private stage!: Konva.Stage;
   private imageLayer!: Konva.Layer;
   private polyLayer!: Konva.Layer;
@@ -424,6 +454,7 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
   constructor(
     private auth: AuthService,
     private floorplanSvc: FloorplanService,
+    private finance: FinanceService,
     private router: Router,
     private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
@@ -568,7 +599,7 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
     const w = this.stage.width();
     const h = this.stage.height();
     const flat = p.points.flatMap(pt => [pt.x * w, pt.y * h]);
-    const colors = POLYGON_TYPE_COLORS[p.polygonType];
+    const colors = { ...POLYGON_TYPE_COLORS[p.polygonType], fill: this.baseFill(p) };
 
     const group = new Konva.Group({ id: String(p.id) });
 
@@ -583,12 +614,18 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
     const cy = p.points.reduce((s, pt) => s + pt.y * h, 0) / p.points.length;
     const displayLabel = p.store?.name ?? p.label ?? '';
 
-    const label = new Konva.Text({
-      x: cx, y: cy, text: displayLabel,
-      fontSize: 11, fill: '#e2e8f0',
-      fontFamily: 'Inter, sans-serif', align: 'center',
-      offsetX: 45, offsetY: 7, width: 90, listening: false,
-    });
+    // a small badge under the centre: readable on any plan, and clear of a name already printed on the image
+    const label = new Konva.Label({ x: cx, y: p.store ? cy + 34 : cy, listening: false });
+    label.add(new Konva.Tag({ fill: 'rgba(15, 23, 42, 0.78)', cornerRadius: 4 }));
+    label.add(new Konva.Text({
+      text: displayLabel, fontSize: 11, fill: '#e2e8f0', fontFamily: 'Inter, sans-serif', padding: 4,
+    }));
+    label.offsetX(label.width() / 2);
+    label.offsetY(label.height() / 2);
+    // corridors and the outline are usually named on the image already; their name stays in the hover tooltip
+    if (!displayLabel || p.polygonType === 'CORRIDOR' || p.polygonType === 'BOUNDARY') {
+      label.visible(false);
+    }
 
     group.add(poly);
     group.add(label);
@@ -598,8 +635,10 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
       poly.fill(this.adjustAlpha(colors.fill, 0.6));
       poly.strokeWidth(3);
       const tooltipText = this.tooltip.getChildren(n => n instanceof Konva.Text)[0] as Konva.Text;
+      const unit = p.store ? this.units.get(p.store.id) : undefined;
       const tip = p.store
         ? `${p.store.name} (${p.store.code})\n${p.store.status.replace('_', ' ')}`
+          + (this.leaseView && unit ? `\n${FloorMapViewerComponent.LEASE_LABEL[unit.leaseState]}${unit.contractEnd ? ' (' + unit.contractEnd + ')' : ''}` : '')
         : (p.label || p.polygonType.replace('_', ' '));
       tooltipText.text(tip);
       const pos = this.stage.getPointerPosition()!;
@@ -638,7 +677,7 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
       const id = Number(group.id());
       const poly = this.polygons.find(p => p.id === id);
       if (poly) {
-        line.fill(POLYGON_TYPE_COLORS[poly.polygonType].fill);
+        line.fill(this.baseFill(poly));
         line.strokeWidth(2);
       }
     });
@@ -678,7 +717,7 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
         if (!line) return;
         const id = Number(group.id());
         const poly = this.polygons.find(p => p.id === id);
-        if (poly) line.fill(POLYGON_TYPE_COLORS[poly.polygonType].fill);
+        if (poly) line.fill(this.baseFill(poly));
       });
       this.polyLayer.batchDraw();
     }
@@ -708,6 +747,43 @@ export class FloorMapViewerComponent implements OnInit, OnDestroy, AfterViewInit
 
   getStatusBg(status: StoreStatus): string {
     return (STORE_STATUS_COLORS[status] ?? '#94a3b8') + '22';
+  }
+
+  /** The unit states are loaded the first time the lease view is switched on. */
+  toggleLeaseView(): void {
+    if (this.leaseView) {
+      this.leaseView = false;
+      this.repaint();
+      return;
+    }
+    const show = () => { this.leaseView = true; this.repaint(); this.cdr.detectChanges(); };
+    if (this.units.size > 0) {
+      show();
+      return;
+    }
+    this.finance.analytics(this.mallId).subscribe({
+      next: a => { a.units.forEach(u => this.units.set(u.storeId, u)); show(); },
+      error: () => undefined
+    });
+  }
+
+  private baseFill(p: PolygonResponse): string {
+    if (this.leaseView && p.polygonType === 'STORE') {
+      const unit = p.store ? this.units.get(p.store.id) : undefined;
+      return FloorMapViewerComponent.LEASE_FILL[unit ? unit.leaseState : 'VACANT'];
+    }
+    return POLYGON_TYPE_COLORS[p.polygonType].fill;
+  }
+
+  private repaint(): void {
+    if (!this.polyLayer) return;
+    this.polyLayer.getChildren(n => n instanceof Konva.Group).forEach(g => {
+      const group = g as Konva.Group;
+      const line = group.getChildren(n => n instanceof Konva.Line)[0] as Konva.Line;
+      const poly = this.polygons.find(p => p.id === Number(group.id()));
+      if (line && poly) line.fill(this.baseFill(poly));
+    });
+    this.polyLayer.batchDraw();
   }
 
   private adjustAlpha(rgba: string, newAlpha: number): string {

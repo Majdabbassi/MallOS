@@ -51,6 +51,8 @@ public class DataInitializer implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final com.mmea.mallos.mall.service.FloorplanService floorplanService;
     private final com.mmea.mallos.mall.service.MallMemberService mallMemberService;
+    private final com.mmea.mallos.audit.AuditService auditService;
+    private final com.mmea.mallos.finance.InvoiceService invoiceService;
 
     @Value("${admin.username:}")
     private String adminUsername;
@@ -147,13 +149,42 @@ public class DataInitializer implements CommandLineRunner {
                 new Unit("B-201", "Cafe Central", StoreCategory.FOOD_BEVERAGE, 60, StoreStatus.VACANT, null, null, null, "1900.00", 60, 580, 360, 940),
                 new Unit("B-202", "Glow Beauty", StoreCategory.HEALTH_BEAUTY, 75, StoreStatus.OPEN, "Hela Mansour", "+216 24 999 000", "hela@example.com", "2600.00", 370, 580, 640, 940),
                 new Unit("B-203", "Cinema Lounge", StoreCategory.ENTERTAINMENT, 140, StoreStatus.UNDER_RENOVATION, "Anis Sassi", "+216 25 123 456", "anis@example.com", "4200.00", 650, 580, 940, 940));
+        // lease start (months ago) and end (days from today; negative: already over) of each unit, so the demo shows
+        // leases that are fine, about to expire, and one that expired without the tenant leaving
+        java.util.Map<String, int[]> leases = java.util.Map.of(
+                "A-101", new int[]{14, 400}, "A-102", new int[]{20, 40}, "A-103", new int[]{9, 75},
+                "A-104", new int[]{30, -12}, "B-202", new int[]{6, 300}, "B-203", new int[]{11, 200});
         java.util.Map<String, Store> stores = new java.util.HashMap<>();
         for (Unit u : units) {
-            stores.put(u.code(), storeRepository.save(Store.builder()
+            int[] lease = leases.get(u.code());
+            Store saved = storeRepository.save(Store.builder()
                     .mall(mall).name(u.name()).code(u.code()).category(u.category())
                     .floor(0).zone(u.code().substring(0, 1)).surface((double) u.zoneSurface()).status(u.status())
                     .ownerName(u.owner()).ownerPhone(u.phone()).ownerEmail(u.email())
-                    .monthlyRent(new BigDecimal(u.rent())).build()));
+                    .contractStart(lease == null ? null : java.time.LocalDate.now().minusMonths(lease[0]))
+                    .contractEnd(lease == null ? null : java.time.LocalDate.now().plusDays(lease[1]))
+                    .monthlyRent(new BigDecimal(u.rent())).build());
+            stores.put(u.code(), saved);
+            auditService.record(manager.getId(), mall.getId(), "STORE_CREATED", "STORE", saved.getId(), 0,
+                    "Store '" + saved.getName() + "' (" + saved.getCode() + ") added on level 0");
+        }
+        // a first floor without a traced plan yet
+        record Upper(String code, String name, StoreCategory category, double surface, StoreStatus status, String owner,
+                     String rent, int startMonthsAgo, int endDays) {}
+        for (Upper u : java.util.List.of(
+                new Upper("L1-01", "Pharma Plus", StoreCategory.HEALTH_BEAUTY, 55, StoreStatus.OPEN, "Dorra Khelifi", "2100.00", 12, 500),
+                new Upper("L1-02", "Kids World", StoreCategory.ENTERTAINMENT, 110, StoreStatus.OPEN, "Walid Haddad", "3300.00", 8, 60),
+                new Upper("L1-03", "Gadget Lab", StoreCategory.ELECTRONICS, 65, StoreStatus.VACANT, null, "2400.00", 0, 0),
+                new Upper("L1-04", "Urban Denim", StoreCategory.FASHION, 90, StoreStatus.OPEN, "Lina Bouzid", "2700.00", 3, 640))) {
+            boolean vacant = u.status() == StoreStatus.VACANT;
+            Store saved = storeRepository.save(Store.builder()
+                    .mall(mall).name(u.name()).code(u.code()).category(u.category()).floor(1).zone("L1")
+                    .surface(u.surface()).status(u.status()).ownerName(u.owner())
+                    .contractStart(vacant ? null : java.time.LocalDate.now().minusMonths(u.startMonthsAgo()))
+                    .contractEnd(vacant ? null : java.time.LocalDate.now().plusDays(u.endDays()))
+                    .monthlyRent(new BigDecimal(u.rent())).build());
+            auditService.record(manager.getId(), mall.getId(), "STORE_CREATED", "STORE", saved.getId(), 1,
+                    "Store '" + saved.getName() + "' (" + saved.getCode() + ") added on level 1");
         }
 
         // The floor goes through the real service, so the image is validated and stored like any upload
@@ -182,7 +213,31 @@ public class DataInitializer implements CommandLineRunner {
         invite.setEmailOrUsername(assistant.getUsername());
         invite.setPermissions(java.util.Set.of(MallPermission.MANAGE_STORES, MallPermission.VIEW_REPORTS));
         mallMemberService.inviteAssistant(managerId, mall.getId(), invite);
-        log.info("Seeded demo mall '{}' with manager '{}', an assistant, {} stores and a traced floor plan.", mall.getName(), manager.getUsername(), units.size());
+        seedDemoInvoices(managerId, mall.getId());
+        log.info("Seeded demo mall '{}' with manager '{}', an assistant, {} stores, a traced floor plan and three months of rent invoices.", mall.getName(), manager.getUsername(), units.size() + 4);
+    }
+
+    /**
+     * Three months of rent: the oldest all paid, the previous one paid except two tenants (so there are late fees),
+     * and the current one partly paid.
+     */
+    private void seedDemoInvoices(Long managerId, Long mallId) {
+        java.time.YearMonth now = java.time.YearMonth.now();
+        for (int back = 2; back >= 0; back--) {
+            String period = now.minusMonths(back).toString();
+            invoiceService.generate(managerId, mallId, period);
+            for (com.mmea.mallos.finance.InvoiceDtos.InvoiceView invoice : invoiceService.list(managerId, mallId, period, null)) {
+                boolean pay = switch (back) {
+                    case 2 -> true;
+                    case 1 -> !java.util.Set.of("A-103", "L1-02").contains(invoice.storeCode());
+                    default -> java.util.Set.of("A-101", "A-102", "B-202").contains(invoice.storeCode());
+                };
+                if (pay) {
+                    invoiceService.pay(managerId, mallId, invoice.id());
+                }
+            }
+        }
+        invoiceService.refresh(managerId, mallId);
     }
 
     /**
@@ -217,10 +272,11 @@ public class DataInitializer implements CommandLineRunner {
         return req;
     }
 
+    /** The demo plan is drawn on a 1000 x 1000 grid; polygons are stored as fractions of the image (0 to 1). */
     private static com.mmea.mallos.mall.dto.PointDto point(double x, double y) {
         com.mmea.mallos.mall.dto.PointDto p = new com.mmea.mallos.mall.dto.PointDto();
-        p.setX(x);
-        p.setY(y);
+        p.setX(x / 1000.0);
+        p.setY(y / 1000.0);
         return p;
     }
 

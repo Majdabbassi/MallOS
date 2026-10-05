@@ -1,5 +1,7 @@
 package com.mmea.mallos.mall.serviceimpl;
 
+import com.mmea.mallos.audit.AuditService;
+import com.mmea.mallos.finance.RentInvoiceRepository;
 import com.mmea.mallos.mall.dto.*;
 import com.mmea.mallos.mall.exception.DuplicateStoreCodeException;
 import com.mmea.mallos.mall.exception.InvalidMallOperationException;
@@ -17,7 +19,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,6 +32,8 @@ public class StoreServiceImpl implements StoreService {
     private final MallRepository    mallRepository;
     private final StoreRepository   storeRepository;
     private final SlotRepository    slotRepository;
+    private final AuditService      audit;
+    private final RentInvoiceRepository invoiceRepository;
 
     @Override
     @Transactional
@@ -57,7 +63,10 @@ public class StoreServiceImpl implements StoreService {
                 .description(req.getDescription())
                 .build();
 
-        return toResponse(storeRepository.save(store));
+        Store saved = storeRepository.save(store);
+        audit.record(userId, mallId, "STORE_CREATED", "STORE", saved.getId(), saved.getFloor(),
+                "Store '" + saved.getName() + "' (" + saved.getCode() + ") added on level " + saved.getFloor());
+        return toResponse(saved);
     }
 
     @Override
@@ -85,6 +94,7 @@ public class StoreServiceImpl implements StoreService {
         if (req.getCode() != null && !req.getCode().equals(store.getCode())) {
             assertUniqueCode(mallId, req.getCode(), storeId);
         }
+        Map<String, Object> before = snapshot(store);
 
         if (req.getName()          != null) store.setName(req.getName());
         if (req.getCode()          != null) store.setCode(req.getCode());
@@ -101,7 +111,13 @@ public class StoreServiceImpl implements StoreService {
         if (req.getMonthlyRent()   != null) store.setMonthlyRent(req.getMonthlyRent());
         if (req.getDescription()   != null) store.setDescription(req.getDescription());
 
-        return toResponse(storeRepository.save(store));
+        Store saved = storeRepository.save(store);
+        String changes = changes(before, snapshot(saved));
+        if (!changes.isEmpty()) {
+            audit.record(userId, mallId, "STORE_UPDATED", "STORE", saved.getId(), saved.getFloor(),
+                    "Store '" + saved.getName() + "' (" + saved.getCode() + "): " + changes);
+        }
+        return toResponse(saved);
     }
 
     @Override
@@ -117,7 +133,14 @@ public class StoreServiceImpl implements StoreService {
                     "Cannot delete store '" + store.getName() + "' — it is currently assigned to a floor polygon. Unlink it first.");
         });
 
+        if (invoiceRepository.existsByStore_Id(storeId)) {
+            throw new InvalidMallOperationException(
+                    "Cannot delete store '" + store.getName() + "' - it has rent invoices. Mark it vacant instead.");
+        }
+
         storeRepository.delete(store);
+        audit.record(userId, mallId, "STORE_DELETED", "STORE", storeId, store.getFloor(),
+                "Store '" + store.getName() + "' (" + store.getCode() + ") deleted");
     }
 
     @Override
@@ -125,6 +148,36 @@ public class StoreServiceImpl implements StoreService {
         permissionService.assertManager(userId, mallId);
         return storeRepository.findUnlinkedByMallId(mallId)
                 .stream().map(this::toResponse).collect(Collectors.toList());
+    }
+
+    /** The fields whose changes are worth a line in the history (contact details are left out on purpose). */
+    private static Map<String, Object> snapshot(Store s) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("name", s.getName());
+        m.put("code", s.getCode());
+        m.put("category", s.getCategory());
+        m.put("level", s.getFloor());
+        m.put("zone", s.getZone());
+        m.put("surface", s.getSurface());
+        m.put("status", s.getStatus());
+        m.put("tenant", s.getOwnerName());
+        m.put("lease start", s.getContractStart());
+        m.put("lease end", s.getContractEnd());
+        m.put("rent", s.getMonthlyRent());
+        return m;
+    }
+
+    private static String changes(Map<String, Object> before, Map<String, Object> after) {
+        List<String> parts = new java.util.ArrayList<>();
+        after.forEach((key, now) -> {
+            Object was = before.get(key);
+            boolean same = was instanceof java.math.BigDecimal a && now instanceof java.math.BigDecimal b
+                    ? a.compareTo(b) == 0 : java.util.Objects.equals(was, now);
+            if (!same) {
+                parts.add(key + " " + (was == null ? "(none)" : was) + " -> " + (now == null ? "(none)" : now));
+            }
+        });
+        return String.join("; ", parts);
     }
 
     private void assertUniqueCode(Long mallId, String code, Long excludeStoreId) {

@@ -18,6 +18,8 @@ import com.mmea.mallos.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import com.mmea.mallos.audit.AuditService;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.Set;
 
 @Service
@@ -28,8 +30,10 @@ public class MallMemberServiceImpl implements MallMemberService {
     private final MallRepository mallRepository;
     private final MallMemberRepository mallMemberRepository;
     private final PermissionService permissionService;
+    private final AuditService audit;
 
     @Override
+    @Transactional
     public MallMember assignManager(Long adminId, Long mallId, Long userId) {
         User admin = userRepository.findById(adminId).orElseThrow(() -> new InvalidMallOperationException("Admin not found"));
         if (admin.getRole() != Role.SUPER_ADMIN) throw new InvalidMallOperationException("Only SUPER_ADMIN can assign managers");
@@ -51,10 +55,14 @@ public class MallMemberServiceImpl implements MallMemberService {
                 .isActive(true)
                 .build();
 
-        return mallMemberRepository.save(member);
+        MallMember saved = mallMemberRepository.save(member);
+        audit.record(adminId, mallId, "MANAGER_ASSIGNED", "MEMBER", user.getId(), null,
+                user.getUsername() + " was made manager of " + mall.getName());
+        return saved;
     }
 
     @Override
+    @Transactional
     public MallMember assignManagerByIdentifier(Long adminId, Long mallId, String emailOrUsername) {
         if (emailOrUsername == null || emailOrUsername.isBlank()) {
             throw new InvalidMallOperationException("Username or email is required");
@@ -73,6 +81,7 @@ public class MallMemberServiceImpl implements MallMemberService {
     }
 
     @Override
+    @Transactional
     public MallMember inviteAssistant(Long managerId, Long mallId, InviteAssistantRequest request) {
         permissionService.assertManager(managerId, mallId);
 
@@ -101,10 +110,14 @@ public class MallMemberServiceImpl implements MallMemberService {
                 .isActive(true)
                 .build();
 
-        return mallMemberRepository.save(member);
+        MallMember saved = mallMemberRepository.save(member);
+        audit.record(managerId, mallId, "MEMBER_INVITED", "MEMBER", user.getId(), null,
+                user.getUsername() + " joined the team with " + sorted(perms));
+        return saved;
     }
 
     @Override
+    @Transactional
     public MallMember updatePermissions(Long managerId, Long mallId, Long targetUserId, Set<MallPermission> permissions) {
         permissionService.assertManager(managerId, mallId);
 
@@ -115,11 +128,16 @@ public class MallMemberServiceImpl implements MallMemberService {
         Set<MallPermission> perms = permissions;
         if (perms == null || perms.isEmpty()) throw new InvalidMallOperationException("Permissions set cannot be empty for ASSISTANT");
 
+        Set<MallPermission> before = target.getPermissions() == null ? Set.of() : Set.copyOf(target.getPermissions());
         target.setPermissions(perms);
-        return mallMemberRepository.save(target);
+        MallMember saved = mallMemberRepository.save(target);
+        audit.record(managerId, mallId, "PERMISSIONS_CHANGED", "MEMBER", targetUserId, null,
+                target.getUser().getUsername() + ": " + sorted(before) + " -> " + sorted(perms));
+        return saved;
     }
 
     @Override
+    @Transactional
     public void deactivateAssistant(Long managerId, Long mallId, Long targetUserId) {
         permissionService.assertManager(managerId, mallId);
 
@@ -129,5 +147,11 @@ public class MallMemberServiceImpl implements MallMemberService {
 
         target.setIsActive(false);
         mallMemberRepository.save(target);
+        audit.record(managerId, mallId, "MEMBER_REMOVED", "MEMBER", targetUserId, null,
+                target.getUser().getUsername() + " was removed from the team");
+    }
+
+    private static String sorted(Set<MallPermission> permissions) {
+        return permissions.stream().map(Enum::name).sorted().collect(java.util.stream.Collectors.joining(", ", "[", "]"));
     }
 }

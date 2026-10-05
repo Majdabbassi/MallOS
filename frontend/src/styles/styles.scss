@@ -53,6 +53,16 @@ app-root {
   background: var(--color-bg-surface) !important;
 }
 
+// Compact rows: PrimeNG's own cell padding is roomy and wraps codes and dates onto two lines
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr > td {
+  padding: 0.65rem 0.75rem;
+}
+
+.p-datatable .p-datatable-tbody > tr > td {
+  white-space: nowrap;
+}
+
 .p-table .p-table-thead > tr > th {
   background: var(--color-bg-elevated) !important;
   color: var(--color-text-secondary) !important;

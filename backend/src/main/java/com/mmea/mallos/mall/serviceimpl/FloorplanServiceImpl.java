@@ -40,6 +40,7 @@ public class FloorplanServiceImpl implements FloorplanService {
     private final SlotRepository          slotRepository;
     private final StoreRepository         storeRepository;
     private final ObjectMapper            objectMapper;
+    private final com.mmea.mallos.audit.AuditService audit;
 
     @Value("${upload.dir:./uploads}")
     private String uploadDir;
@@ -66,7 +67,10 @@ public class FloorplanServiceImpl implements FloorplanService {
                 .status(FloorStatus.UPLOADED)
                 .build();
 
-        return toFloorResponse(floorRepository.save(floor));
+        Floor saved = floorRepository.save(floor);
+        audit.record(userId, mallId, "FLOOR_CREATED", "FLOOR", saved.getId(), saved.getLevel(),
+                "Floor '" + saved.getName() + "' (level " + saved.getLevel() + ") added");
+        return toFloorResponse(saved);
     }
 
     @Override
@@ -97,8 +101,14 @@ public class FloorplanServiceImpl implements FloorplanService {
     public FloorResponse updateFloorStatus(Long userId, Long mallId, Long floorId, FloorStatus status) {
         permissionService.assertAccess(userId, mallId, MallPermission.MANAGE_FLOORPLAN);
         Floor floor = findFloor(mallId, floorId);
+        FloorStatus was = floor.getStatus();
         floor.setStatus(status);
-        return toFloorResponse(floorRepository.save(floor));
+        Floor saved = floorRepository.save(floor);
+        if (was != status) {
+            audit.record(userId, mallId, "FLOOR_STATUS_CHANGED", "FLOOR", saved.getId(), saved.getLevel(),
+                    "Floor '" + saved.getName() + "': " + was + " -> " + status);
+        }
+        return toFloorResponse(saved);
     }
 
     @Override
@@ -213,6 +223,8 @@ public class FloorplanServiceImpl implements FloorplanService {
                 .orElseGet(() -> Slot.builder().floor(floor).polygon(polygon).build());
         slot.setStore(store);
         slotRepository.save(slot);
+        audit.record(userId, mallId, "STORE_LINKED", "STORE", store.getId(), floor.getLevel(),
+                "Store '" + store.getName() + "' (" + store.getCode() + ") placed on the plan of '" + floor.getName() + "'");
 
         return toPolygonResponse(polygon, store);
     }
@@ -224,8 +236,13 @@ public class FloorplanServiceImpl implements FloorplanService {
         FloorPolygon polygon = findPolygon(floorId, polygonId);
 
         slotRepository.findByPolygon_Id(polygonId).ifPresent(slot -> {
+            Store was = slot.getStore();
             slot.setStore(null);
             slotRepository.save(slot);
+            if (was != null) {
+                audit.record(userId, mallId, "STORE_UNLINKED", "STORE", was.getId(), polygon.getFloor().getLevel(),
+                        "Store '" + was.getName() + "' (" + was.getCode() + ") taken off the floor plan");
+            }
         });
 
         return toPolygonResponse(polygon, null);

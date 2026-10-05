@@ -2,6 +2,9 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { MallService } from '../../../core/services/mall.service';
+import { FinanceService } from '../../../core/services/finance.service';
+import { RelativeTimePipe } from '../../../shared/pipes/relative-time.pipe';
+import { auditStyle } from '../activity/activity.component';
 import { StoreService } from '../../../core/services/store.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Mall } from '../../../core/models/mall.model';
@@ -116,9 +119,10 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
         </div>
       </div>
 
-      <div class="recent-activity" *ngIf="!loading">
+      <div class="recent-activity" *ngIf="!loading && activities.length">
         <div class="section-header">
           <h2>Recent Activity</h2>
+          <button class="link" type="button" (click)="router.navigate(['/mall/activity'])">See everything</button>
         </div>
         <div class="activity-list">
           <div class="activity-item" *ngFor="let activity of activities">
@@ -167,6 +171,19 @@ import { SkeletonCardsComponent } from '../../../shared/components/skeleton-card
 
     .section-header {
       margin-bottom: 24px;
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .section-header .link {
+      background: none;
+      border: 0;
+      color: var(--color-primary);
+      cursor: pointer;
+      font: inherit;
+      font-size: 13px;
     }
 
     .section-header h2 {
@@ -367,13 +384,8 @@ export class ManagerDashboardComponent implements OnInit {
   occupiedStores = 0;
   vacantStores = 0;
   managerName = 'Manager';
-  activities = [
-    { icon: 'pi pi-shop', text: 'Store "Tech Arena" added', time: '2 hours ago', color: '#4F8EF7' },
-    { icon: 'pi pi-users', text: 'Assistant Salma permissions updated', time: '5 hours ago', color: '#7C3AED' },
-    { icon: 'pi pi-check-circle', text: 'Store "Fashion Hub" renewed contract', time: 'Yesterday', color: '#10B981' },
-    { icon: 'pi pi-exclamation-triangle', text: 'Maintenance alert in Zone B', time: 'Yesterday', color: '#F59E0B' },
-    { icon: 'pi pi-user-plus', text: 'New assistant Farah Amor added', time: '3 days ago', color: '#4F8EF7' },
-  ];
+  /** The latest lines of the mall's real history (managers only; hidden when it cannot be read). */
+  activities: { icon: string; text: string; time: string; color: string }[] = [];
 
   get greeting(): string {
     const h = new Date().getHours();
@@ -399,7 +411,8 @@ export class ManagerDashboardComponent implements OnInit {
     private mallService: MallService,
     private storeService: StoreService,
     private auth: AuthService,
-    private router: Router
+    public router: Router,
+    private finance: FinanceService
   ) {}
 
   ngOnInit(): void {
@@ -410,6 +423,13 @@ export class ManagerDashboardComponent implements OnInit {
   loadData(): void {
     const user = this.auth.user;
     if (user?.mallId) {
+      this.finance.history(user.mallId, { limit: 6 }, true).subscribe({
+        next: entries => {
+          const relative = new RelativeTimePipe();
+          this.activities = entries.map(e => ({ ...auditStyle(e), text: e.summary, time: `${e.actorName} · ${relative.transform(e.createdAt)}` }));
+        },
+        error: () => (this.activities = [])
+      });
       this.mallService.getById(user.mallId).subscribe(mall => {
         this.mall = mall ?? null;
         if (mall) {

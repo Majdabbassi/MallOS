@@ -36,6 +36,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.NOT_FOUND, ex.getMessage());
     }
 
+    @ExceptionHandler(com.mmea.mallos.finance.InvoiceNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleInvoiceNotFound(com.mmea.mallos.finance.InvoiceNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(com.mmea.mallos.finance.InvoiceStateException.class)
+    public ResponseEntity<Map<String, Object>> handleInvoiceState(com.mmea.mallos.finance.InvoiceStateException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(MallAccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(MallAccessDeniedException ex) {
         return error(HttpStatus.FORBIDDEN, ex.getMessage());

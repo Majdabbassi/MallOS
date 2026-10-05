@@ -1,8 +1,11 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { UIService } from '../services/ui.service';
+
+/** Set on calls whose failure is expected (an optional panel the user may not be allowed to see): no toast. */
+export const SILENT_ERRORS = new HttpContextToken<boolean>(() => false);
 
 const PUBLIC_AUTH_PREFIXES = ['/auth/login', '/auth/register'];
 
@@ -32,7 +35,7 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      if (error instanceof HttpErrorResponse) {
+      if (error instanceof HttpErrorResponse && !req.context.get(SILENT_ERRORS)) {
         ui.showError(extractMessage(error));
       }
       return throwError(() => error);

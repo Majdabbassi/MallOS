@@ -233,6 +233,27 @@ class SecurityIntegrationTest {
 
     // ─── polygon round-trip ────────────────────────────────────────────────
 
+    // Regression: the demo plan stored pixel coordinates (64..960) while the viewer expects fractions (0..1), so its
+    // polygons were drawn far outside the map and nothing on it could be hovered or clicked.
+    @Test
+    @Order(19)
+    void polygonPointsMustBeFractionsOfTheImage() throws Exception {
+        String manager = freshUser("polrange");
+        String mallId = givenMall(manager);
+        long floorId = createFloor(mallId, manager);
+        for (var point : List.of(Map.of("x", 64, "y", 10), Map.of("x", 0.5, "y", -0.1), Map.of("x", 1.5, "y", 0.5))) {
+            var body = Map.of("points", List.of(Map.of("x", 0.1, "y", 0.1), point), "polygonType", "STORE", "label", "Bad");
+            mockMvc.perform(post("/api/malls/" + mallId + "/floors/" + floorId + "/polygons")
+                            .header("Authorization", bearer(manager))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(body)))
+                    .andExpect(status().isBadRequest());
+        }
+        mockMvc.perform(get("/api/malls/" + mallId + "/floors/" + floorId + "/geometry")
+                        .header("Authorization", bearer(manager)))
+                .andExpect(jsonPath("$.polygons.length()").value(0));
+    }
+
     @Test
     @Order(20)
     void polygonCreateGetDeleteRoundTrip() throws Exception {
@@ -241,7 +262,7 @@ class SecurityIntegrationTest {
         long floorId = createFloor(mallId, manager);
 
         var body = Map.of(
-                "points", List.of(Map.of("x", 0, "y", 0), Map.of("x", 100, "y", 0), Map.of("x", 100, "y", 100)),
+                "points", List.of(Map.of("x", 0, "y", 0), Map.of("x", 1, "y", 0), Map.of("x", 1, "y", 1)),
                 "polygonType", "STORE",
                 "label", "Polygon-A");
         MvcResult polyResult = mockMvc.perform(post("/api/malls/" + mallId + "/floors/" + floorId + "/polygons")
@@ -410,7 +431,7 @@ class SecurityIntegrationTest {
 
         // assistant cannot write — they have MANAGE_PRODUCTS but not MANAGE_FLOORPLAN → 403
         var body = Map.of(
-                "points", List.of(Map.of("x", 0, "y", 0), Map.of("x", 10, "y", 10)),
+                "points", List.of(Map.of("x", 0, "y", 0), Map.of("x", 0.1, "y", 0.1)),
                 "polygonType", "STORE");
         mockMvc.perform(post("/api/malls/" + mallId + "/floors/" + floorId + "/polygons")
                         .header("Authorization", bearer(assistant))
@@ -430,7 +451,7 @@ class SecurityIntegrationTest {
         inviteAssistant(mallId, manager, assistant, List.of("MANAGE_FLOORPLAN"));
 
         var body = Map.of(
-                "points", List.of(Map.of("x", 0, "y", 0), Map.of("x", 10, "y", 10)),
+                "points", List.of(Map.of("x", 0, "y", 0), Map.of("x", 0.1, "y", 0.1)),
                 "polygonType", "STORE",
                 "label", "Assistant drew this");
         mockMvc.perform(post("/api/malls/" + mallId + "/floors/" + floorId + "/polygons")
