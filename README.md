@@ -4,6 +4,8 @@ A multi-tenant platform for running shopping malls. A platform administrator cre
 
 **Spring Boot 3 · Java 21 · MySQL · JWT · Angular 18 · PrimeNG · Docker**
 
+**Live demo:** https://mall-os-self.vercel.app (sign in as `manager` or `assistant`, password `Manager@123`; the free API sleeps when idle, so the first request after a pause takes about a minute). Demo data only.
+
 | Floor plan coloured by lease (green leased, orange ending within 90 days, crimson ended, red vacant) | Rent invoices and who owes what |
 | --- | --- |
 | ![Floor plan](docs/screenshots/floor-plan.png) | ![Finance](docs/screenshots/finance.png) |
