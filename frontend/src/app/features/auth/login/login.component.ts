@@ -2,7 +2,13 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { finalize } from 'rxjs/operators';
+import { finalize, retry } from 'rxjs/operators';
+import { timer } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { environment } from '../../../../environments/environment';
+
+/** Free hosting puts the API to sleep: the proxy answers 502-504 (or nothing) until it is back. */
+const WAKING = [0, 502, 503, 504];
 import { AuthService } from '../../../core/services/auth.service';
 import { UIService } from '../../../core/services/ui.service';
 
@@ -58,6 +64,11 @@ import { UIService } from '../../../core/services/ui.service';
             <div class="input-error" *ngIf="loginForm.get('password')?.invalid && attemptedSubmit">
               Password is required
             </div>
+          </div>
+
+          <div class="form-waking" *ngIf="waking">
+            <i class="pi pi-spinner spin"></i>
+            <span>Waking up the free demo server. The first sign-in can take a few minutes, please keep this page open.</span>
           </div>
 
           <div class="form-error" *ngIf="errorMessage">
@@ -228,6 +239,19 @@ import { UIService } from '../../../core/services/ui.service';
       font-size: 14px;
     }
 
+    .form-waking {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px;
+      background: rgba(79, 141, 245, 0.1);
+      border: 1px solid rgba(79, 141, 245, 0.3);
+      border-radius: 8px;
+      color: #B7CEF9;
+      font-size: 14px;
+      line-height: 1.4;
+    }
+
     .login-btn {
       width: 100%;
       height: 44px;
@@ -286,6 +310,7 @@ export class LoginComponent {
   attemptedSubmit = false;
   hasError = false;
   errorMessage = '';
+  waking = false;
 
   constructor(
     private fb: FormBuilder,
@@ -298,6 +323,8 @@ export class LoginComponent {
       email: ['', [Validators.required]],
       password: ['', Validators.required]
     });
+    // Start waking the API while the visitor types; the answer itself does not matter.
+    fetch(`${environment.apiBaseUrl}/auth/login`).catch(() => undefined);
   }
 
   togglePassword(): void {
@@ -316,9 +343,21 @@ export class LoginComponent {
     const { email, password } = this.loginForm.value;
 
     this.auth.login(email, password)
-      .pipe(finalize(() => {
-        this.isLoading = false;
-      }))
+      .pipe(
+        // ~3.5 minutes of retries while the sleeping API starts; a real answer (401…) stops them
+        retry({
+          count: 40,
+          delay: (error: HttpErrorResponse) => {
+            if (!WAKING.includes(error?.status)) throw error;
+            this.waking = true;
+            return timer(5000);
+          }
+        }),
+        finalize(() => {
+          this.isLoading = false;
+          this.waking = false;
+        })
+      )
       .subscribe({
         next: user => {
           this.uiService.showSuccess('Welcome back!');
@@ -330,10 +369,13 @@ export class LoginComponent {
             this.router.navigate(['/']);
           }
         },
-        error: () => {
+        error: (error: HttpErrorResponse) => {
           this.hasError = true;
-          this.errorMessage = 'Invalid email or password';
-          this.uiService.showError('Invalid credentials');
+          const wrongLogin = error?.status === 400 || error?.status === 401 || error?.status === 403;
+          this.errorMessage = wrongLogin
+            ? 'Invalid email or password'
+            : 'The demo server is not answering yet. Please try again in a minute.';
+          this.uiService.showError(wrongLogin ? 'Invalid credentials' : 'Server not ready');
 
           setTimeout(() => {
             this.hasError = false;
