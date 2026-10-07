@@ -46,6 +46,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(com.mmea.mallos.maintenance.WorkOrderNotFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleWorkOrderNotFound(com.mmea.mallos.maintenance.WorkOrderNotFoundException ex) {
+        return error(HttpStatus.NOT_FOUND, ex.getMessage());
+    }
+
+    @ExceptionHandler(com.mmea.mallos.maintenance.WorkOrderStateException.class)
+    public ResponseEntity<Map<String, Object>> handleWorkOrderState(com.mmea.mallos.maintenance.WorkOrderStateException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(MallAccessDeniedException.class)
     public ResponseEntity<Map<String, Object>> handleAccessDenied(MallAccessDeniedException ex) {
         return error(HttpStatus.FORBIDDEN, ex.getMessage());

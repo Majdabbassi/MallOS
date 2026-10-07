@@ -60,6 +60,10 @@ import { Observable } from 'rxjs';
             <i class="pi pi-chart-bar"></i>
             <span *ngIf="!(collapsed$ | async)">Occupancy</span>
           </a>
+          <a routerLink="/mall/maintenance" routerLinkActive="active" class="nav-item">
+            <i class="pi pi-wrench"></i>
+            <span *ngIf="!(collapsed$ | async)">Maintenance</span>
+          </a>
           <a routerLink="/mall/team" routerLinkActive="active" class="nav-item">
             <i class="pi pi-users"></i>
             <span *ngIf="!(collapsed$ | async)">Team</span>

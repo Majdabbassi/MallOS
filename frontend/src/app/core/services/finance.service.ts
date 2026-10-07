@@ -41,6 +41,15 @@ export class FinanceService {
     return this.http.post<Invoice>(`${API_BASE}/malls/${mallId}/invoices/${invoiceId}/cancel`, null);
   }
 
+  /** A CSV report as a file: the units and leases, or the invoices of a month (needs "Export reports"). */
+  exportCsv(mallId: string | number, report: 'units' | 'invoices', period?: string): Observable<Blob> {
+    let params = new HttpParams();
+    if (period) params = params.set('period', period);
+    return this.http.get(`${API_BASE}/malls/${mallId}/reports/${report}.csv`, {
+      params, responseType: 'blob', context: new HttpContext().set(SILENT_ERRORS, true)
+    });
+  }
+
   analytics(mallId: string | number, silent = false): Observable<MallAnalytics> {
     return this.http.get<MallAnalytics>(`${API_BASE}/malls/${mallId}/analytics`, {
       context: new HttpContext().set(SILENT_ERRORS, silent)

@@ -25,6 +25,7 @@ type Filter = 'ALL' | 'UNPAID' | 'LATE' | 'PAID';
           <input type="month" class="month" [(ngModel)]="period" (change)="load()" aria-label="Month">
           <button pButton type="button" class="p-button-outlined" icon="pi pi-percentage" label="Apply late fees"
                   [disabled]="busy" (click)="applyLateFees()"></button>
+          <button pButton type="button" class="p-button-outlined" icon="pi pi-download" label="Export CSV" [disabled]="busy" (click)="exportCsv()"></button>
           <button pButton type="button" icon="pi pi-file-edit" label="Generate invoices" [disabled]="busy" (click)="generate()"></button>
         </div>
       </div>
@@ -151,6 +152,26 @@ export class FinanceComponent implements OnInit {
   ];
 
   constructor(private auth: AuthService, private finance: FinanceService, private ui: UIService) {}
+
+  /** The invoices of the selected month as CSV (needs "Export reports" as well as finance access). */
+  exportCsv(): void {
+    if (!this.mallId) return;
+    this.finance.exportCsv(this.mallId, 'invoices', this.period).subscribe({
+      next: blob => this.saveAs(blob, `invoices-${this.period}.csv`),
+      error: err => this.ui.showError(err.status === 403 ? 'You need the "Export reports" permission.' : 'The export failed, please try again.')
+    });
+  }
+
+  /** Saves a downloaded blob under a file name. */
+  private saveAs(blob: Blob, name: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
 
   private get mallId(): string | undefined {
     return this.auth.user?.mallId;

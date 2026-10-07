@@ -53,6 +53,8 @@ public class DataInitializer implements CommandLineRunner {
     private final com.mmea.mallos.mall.service.MallMemberService mallMemberService;
     private final com.mmea.mallos.audit.AuditService auditService;
     private final com.mmea.mallos.finance.InvoiceService invoiceService;
+    private final com.mmea.mallos.maintenance.WorkOrderService workOrderService;
+    private final com.mmea.mallos.maintenance.WorkOrderRepository workOrderRepository;
 
     @Value("${admin.username:}")
     private String adminUsername;
@@ -104,7 +106,42 @@ public class DataInitializer implements CommandLineRunner {
         }
         if (demoEnabled) {
             restoreDemoFloorImages();
+            // also runs once on a demo database created before work orders existed
+            if (workOrderRepository.count() == 0) {
+                seedDemoWorkOrders();
+            }
         }
+    }
+
+    /** A few maintenance jobs in the demo mall: one urgent and open, one in progress, one done with its cost. */
+    private void seedDemoWorkOrders() {
+        User manager = userRepository.findByUsername(demoManagerUsername).orElse(null);
+        if (manager == null) return;
+        Mall mall = mallRepository.findAll().stream()
+                .filter(m -> mallMemberRepository.findActiveByUserAndMall(manager.getId(), m.getId()) != null)
+                .findFirst().orElse(null);
+        if (mall == null) return;
+        java.util.function.Function<String, Long> store = code -> storeRepository.findByMall_IdAndCode(mall.getId(), code)
+                .map(Store::getId).orElse(null);
+        Long managerId = manager.getId();
+        Long mallId = mall.getId();
+        workOrderService.create(managerId, mallId, new com.mmea.mallos.maintenance.WorkOrderDtos.WorkOrderRequest(
+                "Escalator stopped between ground floor and level 1", "Emergency stop pressed, error E42 on the panel.",
+                com.mmea.mallos.maintenance.WorkOrder.Priority.URGENT, null, "Escalator contractor"));
+        var leak = workOrderService.create(managerId, mallId, new com.mmea.mallos.maintenance.WorkOrderDtos.WorkOrderRequest(
+                "Water leak from the ceiling", "Reported by the tenant after the rain, near the fitting rooms.",
+                com.mmea.mallos.maintenance.WorkOrder.Priority.HIGH, store.apply("B-202"), "Plumber on call"));
+        workOrderService.changeStatus(managerId, mallId, leak.id(), new com.mmea.mallos.maintenance.WorkOrderDtos.StatusChange(
+                com.mmea.mallos.maintenance.WorkOrder.Status.IN_PROGRESS, null));
+        var ac = workOrderService.create(managerId, mallId, new com.mmea.mallos.maintenance.WorkOrderDtos.WorkOrderRequest(
+                "Air conditioning not cooling", null, com.mmea.mallos.maintenance.WorkOrder.Priority.NORMAL,
+                store.apply("A-101"), "Cooling contractor"));
+        workOrderService.changeStatus(managerId, mallId, ac.id(), new com.mmea.mallos.maintenance.WorkOrderDtos.StatusChange(
+                com.mmea.mallos.maintenance.WorkOrder.Status.DONE, new java.math.BigDecimal("420.00")));
+        workOrderService.create(managerId, mallId, new com.mmea.mallos.maintenance.WorkOrderDtos.WorkOrderRequest(
+                "Repaint the unit before the next tenant", null, com.mmea.mallos.maintenance.WorkOrder.Priority.LOW,
+                store.apply("B-201"), null));
+        log.info("Seeded demo maintenance work orders.");
     }
 
     private void seedDemoMall(User admin) {

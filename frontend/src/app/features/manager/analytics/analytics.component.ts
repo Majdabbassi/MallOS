@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { MallAnalytics, UnitState } from '../../../core/models/finance.model';
 import { AuthService } from '../../../core/services/auth.service';
 import { FinanceService } from '../../../core/services/finance.service';
+import { UIService } from '../../../core/services/ui.service';
 
 @Component({
   selector: 'app-analytics',
@@ -10,9 +11,12 @@ import { FinanceService } from '../../../core/services/finance.service';
   imports: [CommonModule],
   template: `
     <div class="page">
-      <div class="page-head">
-        <h1>Occupancy and leases</h1>
-        <p class="text-secondary">How full the mall is, what it earns per square meter and which leases need attention</p>
+      <div class="page-head head-row">
+        <div>
+          <h1>Occupancy and leases</h1>
+          <p class="text-secondary">How full the mall is, what it earns per square meter and which leases need attention</p>
+        </div>
+        <button type="button" class="export-btn" (click)="exportCsv()" [disabled]="exporting"><i class="pi pi-download"></i> Export CSV</button>
       </div>
 
       <div class="forbidden" *ngIf="forbidden"><i class="pi pi-lock"></i> You need the reports permission to see this page.</div>
@@ -100,6 +104,9 @@ import { FinanceService } from '../../../core/services/finance.service';
     .tag.expiring { background: rgba(245, 158, 11, .16); color: #fbbf24; }
     .tag.expired { background: rgba(239, 68, 68, .16); color: #f87171; }
     .tag.vacant { background: rgba(148, 163, 184, .16); color: #cbd5e1; }
+    .head-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+    .export-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--color-border); background: transparent; color: inherit; cursor: pointer; font: inherit; }
+    .export-btn:disabled { opacity: .6; cursor: default; }
     .forbidden { padding: 24px; border: 1px dashed var(--color-border); border-radius: var(--radius-lg); color: var(--color-text-secondary); }
     @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; } }
   `]
@@ -107,14 +114,38 @@ import { FinanceService } from '../../../core/services/finance.service';
 export class AnalyticsComponent implements OnInit {
   a: MallAnalytics | null = null;
   forbidden = false;
+  exporting = false;
 
-  constructor(private auth: AuthService, private finance: FinanceService) {}
+  constructor(private auth: AuthService, private finance: FinanceService, private ui: UIService) {}
 
   ngOnInit(): void {
     const mallId = this.auth.user?.mallId;
     if (mallId) {
       this.finance.analytics(mallId).subscribe({ next: a => (this.a = a), error: err => (this.forbidden = err.status === 403) });
     }
+  }
+
+  exportCsv(): void {
+    const mallId = this.auth.user?.mallId;
+    if (!mallId) return;
+    this.exporting = true;
+    this.finance.exportCsv(mallId, 'units').subscribe({
+      next: blob => { this.exporting = false; this.saveAs(blob, 'units-and-leases.csv'); },
+      error: err => {
+        this.exporting = false;
+        this.ui.showError(err.status === 403 ? 'You need the "Export reports" permission.' : 'The export failed, please try again.');
+      }
+    });
+  }
+
+  /** Saves a downloaded blob under a file name. */
+  private saveAs(blob: Blob, name: string): void {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = name;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
   attention(): UnitState[] {

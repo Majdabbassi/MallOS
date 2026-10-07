@@ -44,6 +44,17 @@ public class PermissionServiceImpl implements PermissionService {
     }
 
     @Override
+    public MallMember assertTeamManager(Long userId, Long mallId) {
+        User user = userRepository.findById(userId).orElseThrow(MallAccessDeniedException::new);
+        if (user.getRole() == Role.SUPER_ADMIN) return null;
+        MallMember member = mallMemberRepository.findActiveByUserAndMall(userId, mallId);
+        if (member == null) throw new MallAccessDeniedException();
+        if (member.getRole() == MallMemberRole.MANAGER) return null;
+        if (member.getPermissions() != null && member.getPermissions().contains(MallPermission.MANAGE_EMPLOYEES)) return member;
+        throw new MallAccessDeniedException();
+    }
+
+    @Override
     public void assertManager(Long userId, Long mallId) {
         User user = userRepository.findById(userId).orElseThrow(MallAccessDeniedException::new);
         if (user.getRole() == Role.SUPER_ADMIN) return;

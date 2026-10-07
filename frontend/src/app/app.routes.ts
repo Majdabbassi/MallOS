@@ -63,6 +63,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/manager/activity/activity.component').then(m => m.ActivityComponent)
       },
       {
+        path: 'maintenance',
+        loadComponent: () => import('./features/manager/maintenance/maintenance.component').then(m => m.MaintenanceComponent)
+      },
+      {
         path: 'team',
         loadComponent: () => import('./features/manager/team/team.component').then(m => m.TeamComponent)
       },

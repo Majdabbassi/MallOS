@@ -5,6 +5,7 @@ import com.mmea.mallos.mall.exception.InvalidMallOperationException;
 import com.mmea.mallos.mall.exception.MallNotFoundException;
 import com.mmea.mallos.mall.exception.UserAlreadyMemberException;
 import com.mmea.mallos.mall.model.Mall;
+import com.mmea.mallos.mall.exception.MallAccessDeniedException;
 import com.mmea.mallos.mall.model.MallMember;
 import com.mmea.mallos.mall.model.enums.MallMemberRole;
 import com.mmea.mallos.mall.model.enums.MallPermission;
@@ -76,14 +77,14 @@ public class MallMemberServiceImpl implements MallMemberService {
     @Override
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public java.util.List<MallMember> listMembers(Long requesterId, Long mallId) {
-        permissionService.assertManager(requesterId, mallId);
+        permissionService.assertTeamManager(requesterId, mallId);
         return mallMemberRepository.findActiveByMall(mallId);
     }
 
     @Override
     @Transactional
     public MallMember inviteAssistant(Long managerId, Long mallId, InviteAssistantRequest request) {
-        permissionService.assertManager(managerId, mallId);
+        MallMember delegate = permissionService.assertTeamManager(managerId, mallId);
 
         Mall mall = mallRepository.findById(mallId).orElseThrow(MallNotFoundException::new);
 
@@ -98,6 +99,7 @@ public class MallMemberServiceImpl implements MallMemberService {
 
         Set<MallPermission> perms = request.getPermissions();
         if (perms == null || perms.isEmpty()) throw new InvalidMallOperationException("Assistant must have at least one permission");
+        withinOwnRights(delegate, perms);
 
         User inviter = userRepository.findById(managerId).orElseThrow(() -> new InvalidMallOperationException("Manager not found"));
 
@@ -119,7 +121,7 @@ public class MallMemberServiceImpl implements MallMemberService {
     @Override
     @Transactional
     public MallMember updatePermissions(Long managerId, Long mallId, Long targetUserId, Set<MallPermission> permissions) {
-        permissionService.assertManager(managerId, mallId);
+        MallMember delegate = permissionService.assertTeamManager(managerId, mallId);
 
         MallMember target = mallMemberRepository.findActiveByUserAndMall(targetUserId, mallId);
         if (target == null) throw new InvalidMallOperationException("Target is not an active member");
@@ -127,6 +129,8 @@ public class MallMemberServiceImpl implements MallMemberService {
 
         Set<MallPermission> perms = permissions;
         if (perms == null || perms.isEmpty()) throw new InvalidMallOperationException("Permissions set cannot be empty for ASSISTANT");
+        mayManage(delegate, target);
+        withinOwnRights(delegate, perms);
 
         Set<MallPermission> before = target.getPermissions() == null ? Set.of() : Set.copyOf(target.getPermissions());
         target.setPermissions(perms);
@@ -139,16 +143,31 @@ public class MallMemberServiceImpl implements MallMemberService {
     @Override
     @Transactional
     public void deactivateAssistant(Long managerId, Long mallId, Long targetUserId) {
-        permissionService.assertManager(managerId, mallId);
+        MallMember delegate = permissionService.assertTeamManager(managerId, mallId);
 
         MallMember target = mallMemberRepository.findActiveByUserAndMall(targetUserId, mallId);
         if (target == null) throw new InvalidMallOperationException("Target is not an active member");
         if (target.getRole() != MallMemberRole.ASSISTANT) throw new InvalidMallOperationException("Cannot deactivate a MANAGER");
+        mayManage(delegate, target);
 
         target.setIsActive(false);
         mallMemberRepository.save(target);
         audit.record(managerId, mallId, "MEMBER_REMOVED", "MEMBER", targetUserId, null,
                 target.getUser().getUsername() + " was removed from the team");
+    }
+
+    /** An assistant running the team can only hand out permissions they hold themselves. */
+    private static void withinOwnRights(MallMember delegate, Set<MallPermission> requested) {
+        if (delegate == null) return; // manager or super admin
+        Set<MallPermission> own = delegate.getPermissions() == null ? Set.of() : delegate.getPermissions();
+        if (!own.containsAll(requested)) throw new MallAccessDeniedException();
+    }
+
+    /** ...and only change or remove assistants who are not themselves and have no right they lack. */
+    private static void mayManage(MallMember delegate, MallMember target) {
+        if (delegate == null) return;
+        if (delegate.getUser().getId().equals(target.getUser().getId())) throw new MallAccessDeniedException();
+        withinOwnRights(delegate, target.getPermissions() == null ? Set.of() : target.getPermissions());
     }
 
     private static String sorted(Set<MallPermission> permissions) {

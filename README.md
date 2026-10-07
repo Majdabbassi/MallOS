@@ -1,6 +1,6 @@
 # Mall OS
 
-A multi-tenant platform for running shopping malls. A platform administrator creates malls and assigns each one a manager; the manager uploads the **floor plan**, traces the shop units on it, links every unit to a store (tenant, rent, lease), invites assistants with fine-grained permissions, bills rent every month and watches occupancy. Every mall is isolated from every other, and every change is recorded in an audit trail.
+A multi-tenant platform for running shopping malls. A platform administrator creates malls and assigns each one a manager; the manager uploads the **floor plan**, traces the shop units on it, links every unit to a store (tenant, rent, lease), invites assistants with fine-grained permissions, bills rent every month, tracks maintenance work orders and watches occupancy. Every mall is isolated from every other, and every change is recorded in an audit trail.
 
 **Spring Boot 4.1 · Java 21 · MySQL · JWT · Angular 18 · PrimeNG · Konva · Docker**
 
@@ -44,6 +44,12 @@ Locally, `docker compose up` runs MySQL, the API and the web app (nginx), every 
 
 **Audit trail** (`audit/AuditService`). Store, floor, member and invoice services call `record(...)` inside their own transaction (`Propagation.REQUIRED`), so the history entry commits or rolls back with the change. A store edit records the before and after of rent, status and lease dates. Managers search it by person, level and kind.
 
+**Maintenance work orders** (`maintenance/`). A job (a leak in B-202, an escalator stopped) is opened with a priority, optionally on a store, and assigned to a contractor; it moves `OPEN → IN_PROGRESS → DONE` (with its cost) or `CANCELED`, and closed orders are kept as history, never deleted. The board lists open work first, most urgent on top. Every step goes to the audit trail, and the lookup includes the mall id, so another mall's order answers 404.
+
+**Team delegation.** An assistant holding *Manage the team* can list, invite, re-permission and remove assistants — but only hand out permissions they hold themselves, only touch assistants with no right they lack, and never touch the manager or their own account. So a manager can delegate hiring without anyone being able to escalate.
+
+**CSV exports** (`analytics/ReportExportService`). *Export reports* downloads the units-and-leases report; the invoice export also needs finance access. Cells are quoted, and a value a spreadsheet would run as a formula (`=`, `+`, `-`, `@` first) is prefixed with an apostrophe, because tenant names are typed by users. Each export is written to the audit trail, since it hands tenant data out.
+
 **Analytics** (`analytics/`). Computed on request from the stores: occupancy by floor and category, monthly rent, rent per m² (only units with both a rent and a surface), rent waiting on vacant units, leases ending within 90 days and leases already over with the tenant still in place.
 
 ## Key decisions and trade-offs
@@ -67,7 +73,7 @@ Locally, `docker compose up` runs MySQL, the API and the web app (nginx), every 
 | --- | --- |
 | Super admin | create malls, assign managers, read and change any mall |
 | Manager | everything inside their own mall: floors, stores, team, finance, audit |
-| Assistant | only what the manager granted, in that mall |
+| Assistant | only what the manager granted, in that mall: stores, floor plan, reports, report exports, finance, maintenance work orders, and running the team within their own rights |
 | Signed-in user with no membership | nothing in any mall (403) |
 | Anonymous | `/auth/**` (login, register as a plain user) and the API docs |
 
@@ -82,7 +88,9 @@ Uploaded images are only served to members of the mall; no response contains a p
 - **Rent and invoices**: monthly billing with proration, due date, late fee, Paid and Cancel actions, billed / collected / outstanding / overdue totals and a "who owes what" list sorted by the worst debtor.
 - **Occupancy and lease analytics** by floor and category.
 - **Audit trail** of every change, with filters; the dashboard shows the latest lines.
-- **Team**: managers invite assistants and tick their permissions; the admin assigns managers.
+- **Maintenance**: work orders by store or common area, priority, contractor, status and cost.
+- **CSV exports** of the units and leases, and of a month's invoices.
+- **Team**: managers invite assistants and tick their permissions, and can let a trusted assistant run the team; the admin assigns managers.
 
 ## Run it
 
@@ -114,11 +122,12 @@ Try this: sign in as `manager`, open **Interactive Map** and press *Show leases*
 cd backend && mvn test
 ```
 
-38 tests on an in-memory database, no services needed:
+41 tests on an in-memory database, no services needed:
 
 - **Authorization and uploads (21)**: anonymous 401, outsiders 403, cross-mall access, assistants with and without the floor-plan and store permissions, the super admin, registration that ignores a client-supplied role, polygon points outside 0..1 refused, upload validation (non-images refused, image served only to members), duplicate store code 409, malformed bodies 400, no password hash in any response.
 - **Team management (5)**: the manager sees the active team without secrets, a removed assistant leaves it, only the manager or an admin may list it, the admin assigns a manager by username or e-mail, client mistakes are 4xx.
 - **Finance, audit, analytics (7)**: proration, one invoice per store and month, late fee added once, paid invoices are final, the debtors list, who may see or change finance; what the audit records, its filters, nothing recorded for a failed change, managers only, no cross-mall history; the occupancy figures.
+- **Team delegation, exports, work orders (3)**: an assistant running the team can only grant rights they hold, cannot touch a stronger assistant, the manager or themselves; exports need the export right (and finance for invoices), quote commas, neutralize formulas and are audited; work orders follow their life cycle (done and canceled are final), refuse a store of another mall, need the permission, stay invisible to another mall's manager and are audited.
 - **JWT key guard (4)** and the application context (1).
 
 Each protection was checked by removing it and watching its test fail. CI runs the tests, builds the web app and validates the compose file.
@@ -146,7 +155,7 @@ Each protection was checked by removing it and watching its test fail. CI runs t
 
 - The free API sleeps after about 15 minutes idle; the first request after a pause can take from 20 seconds to a few minutes.
 - Floor plan images live on the API's disk. On Render that disk is wiped on every deploy or restart: the demo image is restored from the jar, but a plan uploaded on the live demo is not kept. Object storage (S3-compatible) would fix it.
-- The Team screen also offers *Edit reports*, *Manage products*, *Manage employees* and *Manage orders*; they are stored but no screen or endpoint uses them yet.
+- *Manage products* is no longer offered on the Team screen (a mall has no product catalog); the value stays in the code only so permissions saved before still load.
 - `GeometryExtractionService` is an interface with no implementation: a planned seam for detecting units automatically from the image (OpenCV or a vision model). Tracing is manual today.
 - The schema is managed by Hibernate (`ddl-auto=update`), not by migrations. The web app has no unit tests; CI builds it.
 

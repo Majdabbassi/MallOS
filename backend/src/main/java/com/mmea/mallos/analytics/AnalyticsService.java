@@ -36,6 +36,12 @@ public class AnalyticsService {
     @Transactional(readOnly = true)
     public MallAnalytics analyze(Long userId, Long mallId) {
         permissions.assertAccess(userId, mallId, MallPermission.VIEW_REPORTS);
+        return compute(mallId);
+    }
+
+    /** The analysis itself, without a permission check: callers check first (see ReportExportService). */
+    @Transactional(readOnly = true)
+    public MallAnalytics compute(Long mallId) {
         LocalDate today = LocalDate.now();
         List<Store> all = stores.findByMall_IdOrderByCodeAsc(mallId);
 
